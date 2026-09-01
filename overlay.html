@@ -26,7 +26,7 @@
       z-index: 1;
     }
 
-    /* สไตล์ฟองสบู่วงกลม */
+    /* ฟองสบู่วงกลม */
     .bubble {
       position: absolute;
       bottom: -180px;
@@ -53,19 +53,15 @@
         transform: translateY(0) scale(0.7) rotate(0deg);
         opacity: 0;
       }
-      10% {
-        opacity: 1;
-      }
-      90% {
-        opacity: 1;
-      }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
       100% {
         transform: translateY(-115vh) scale(1.1) rotate(15deg);
         opacity: 0;
       }
     }
 
-    /* กล่องแสดง QR Code มุมขวาล่าง */
+    /* QR Code มุมจอ */
     .qr-box {
       position: fixed;
       bottom: 25px;
@@ -80,6 +76,7 @@
       box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
       backdrop-filter: blur(5px);
       z-index: 10;
+      transition: all 0.3s ease;
     }
 
     .qr-box img {
@@ -103,15 +100,14 @@
 
   <div id="bubble-container"></div>
 
-  <!-- ส่วนแสดงผล QR Code -->
   <div class="qr-box" id="qr-box">
     <img id="qr-image" src="" alt="Scan QR Code">
-    <span>📱 สแกนส่งรูปขึ้นจอ</span>
+    <span id="qr-text">📱 สแกนส่งรูปขึ้นจอ</span>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
@@ -129,18 +125,46 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
+    
     const container = document.getElementById('bubble-container');
+    const qrBox = document.getElementById('qr-box');
+    const qrText = document.getElementById('qr-text');
 
-    // 1. สร้าง QR Code สำหรับลิงก์ Donate ของห้องนี้
+    // สร้าง QR Code อ้างอิงจากลิงก์ Donate
     const donateUrl = `https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`;
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(donateUrl)}`;
-    document.getElementById('qr-image').src = qrApiUrl;
+    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(donateUrl)}`;
 
-    // คลังเก็บรูปภาพทั้งหมดที่ถูกอัปโหลดในห้องนี้
     const imageList = [];
     let currentIndex = 0;
+    let loopTimer = null;
+    let spawnSpeed = 2500; // ค่าเริ่มต้นปล่อยฟองสบู่ทุก 2.5 วินาที
 
-    // ฟังก์ชันสร้างฟองสบู่
+    // 1. ฟังการตั้งค่าจากหน้า Control แบบ Realtime
+    const settingsRef = ref(db, `events/${roomId}/settings`);
+    onValue(settingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const settings = snapshot.val();
+
+      // สั่ง ปิด/เปิด QR Code
+      if (settings.showQR === false) {
+        qrBox.style.display = 'none';
+      } else {
+        qrBox.style.display = 'flex';
+      }
+
+      // เปลี่ยนข้อความใต้ QR Code
+      if (settings.welcomeText) {
+        qrText.innerText = settings.welcomeText;
+      }
+
+      // ปรับความเร็วการปล่อยฟองสบู่ (ถ้าหน้า control มีการส่งค่า speed/interval)
+      if (settings.spawnSpeed && settings.spawnSpeed !== spawnSpeed) {
+        spawnSpeed = Number(settings.spawnSpeed);
+        resetLoopTimer();
+      }
+    });
+
+    // 2. ฟังก์ชันสร้างฟองสบู่
     function createBubble(imgUrl) {
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
@@ -166,26 +190,33 @@
       }, duration * 1000);
     }
 
-    // 2. ดึงรูปทั้งหมดจาก Firebase เก็บเข้าคลัง imageList
+    // 3. ดึงรูปทั้งหมดเก็บเข้า คลัง imageList
     const donationsRef = ref(db, `events/${roomId}/donations`);
     onChildAdded(donationsRef, (snapshot) => {
       const data = snapshot.val();
       const imgUrl = data?.imageUrl || data?.url;
       if (imgUrl && !imageList.includes(imgUrl)) {
         imageList.push(imgUrl);
-        // แสดงผลทันทีเมื่อมีรูปใหม่เข้ามา
         createBubble(imgUrl);
       }
     });
 
-    // 3. ระบบวนลูปปล่อยฟองสบู่จากรูปในคลังต่อเนื่องทุกๆ 2.5 วินาที
-    setInterval(() => {
-      if (imageList.length > 0) {
-        const imgUrl = imageList[currentIndex];
-        createBubble(imgUrl);
-        currentIndex = (currentIndex + 1) % imageList.length; // วนกลับไปเริ่มรูปแรกเมื่อครบ
-      }
-    }, 2500);
+    // 4. วนลูปปล่อยฟองสบู่
+    function startLoopTimer() {
+      loopTimer = setInterval(() => {
+        if (imageList.length > 0) {
+          createBubble(imageList[currentIndex]);
+          currentIndex = (currentIndex + 1) % imageList.length;
+        }
+      }, spawnSpeed);
+    }
+
+    function resetLoopTimer() {
+      if (loopTimer) clearInterval(loopTimer);
+      startLoopTimer();
+    }
+
+    startLoopTimer();
   </script>
 
 </body>
