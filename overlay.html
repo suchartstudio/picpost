@@ -11,9 +11,19 @@
     body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
     #bubble-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-    .bubble {
+    /* กล่องห่อหุ้มฟองสบู่และชื่อ เพื่อให้ลอยขึ้นไปพร้อมกัน */
+    .bubble-wrapper {
       position: absolute;
-      bottom: -300px;
+      bottom: -350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      animation: floatUp 9s linear forwards;
+    }
+
+    /* ฟองสบู่วงกลม */
+    .bubble {
       border-radius: 50%;
       border: 4px solid #00f0ff;
       box-shadow: 0 0 20px rgba(0, 240, 255, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.5);
@@ -22,10 +32,23 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: floatUp 9s linear forwards;
     }
 
     .bubble img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+    /* ป้ายชื่อด้านล่าง */
+    .bubble-name {
+      color: #ffffff;
+      font-weight: 400;
+      font-size: 16px;
+      background: rgba(22, 27, 34, 0.85);
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+      white-space: nowrap;
+    }
 
     @keyframes floatUp {
       0% { transform: translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
@@ -74,14 +97,14 @@
     document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
 
     const container = document.getElementById('bubble-container');
-    const imageList = [];
+    const imageList = []; // ตอนนี้เก็บเป็น Object { imgUrl, name } แทน
     
     let currentIndex = 0;
     let loopTimer = null;
     let spawnSpeed = 2500;
     let bubbleScale = 1;
     let spreadArea = 80;
-    let lastLeftPos = -100; // ไว้เก็บตำแหน่งล่าสุด ป้องกันฟองสบู่บังกัน
+    let lastLeftPos = -100; 
 
     const settingsRef = ref(db, `events/${roomId}/settings`);
     onValue(settingsRef, (snapshot) => {
@@ -99,17 +122,33 @@
       }
     });
 
-    function createBubble(imgUrl) {
+    function createBubble(itemData) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'bubble-wrapper';
+
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       
-      // คำนวณขนาดภาพตามที่รับค่ามาจาก Control
       const baseSize = Math.floor(Math.random() * 80) + 120;
       const finalSize = baseSize * bubbleScale;
       bubble.style.width = `${finalSize}px`;
       bubble.style.height = `${finalSize}px`;
 
-      // อัลกอริทึมสุ่มตำแหน่ง เพื่อลดการซ้อนทับ
+      const img = document.createElement('img');
+      img.src = itemData.imgUrl;
+      bubble.appendChild(img);
+      wrapper.appendChild(bubble);
+
+      // สร้างป้ายชื่อถ้ามีข้อมูลชื่อส่งมาด้วย
+      if (itemData.name) {
+        const nameTag = document.createElement('div');
+        nameTag.className = 'bubble-name';
+        nameTag.innerText = itemData.name;
+        // ปรับฟอนต์ให้ใหญ่ขึ้น/เล็กลงตามสเกลที่ตั้งค่า
+        nameTag.style.fontSize = `${Math.max(12, 16 * bubbleScale)}px`;
+        wrapper.appendChild(nameTag);
+      }
+
       let leftPos;
       let attempts = 0;
       const margin = (100 - spreadArea) / 2; 
@@ -117,27 +156,28 @@
       do {
         leftPos = margin + Math.floor(Math.random() * spreadArea);
         attempts++;
-      } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15); // ถ้าสุ่มได้จุดใกล้ของเดิม (ห่างไม่ถึง 15%) ให้สุ่มใหม่
+      } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
       
       lastLeftPos = leftPos;
-      bubble.style.left = `${leftPos}%`;
+      wrapper.style.left = `${leftPos}%`;
 
       const duration = Math.floor(Math.random() * 4) + 7;
-      bubble.style.animationDuration = `${duration}s`;
+      wrapper.style.animationDuration = `${duration}s`;
 
-      const img = document.createElement('img');
-      img.src = imgUrl;
-      bubble.appendChild(img);
-      container.appendChild(bubble);
-
-      setTimeout(() => bubble.remove(), duration * 1000);
+      container.appendChild(wrapper);
+      setTimeout(() => wrapper.remove(), duration * 1000);
     }
 
     onChildAdded(ref(db, `events/${roomId}/donations`), (snapshot) => {
-      const imgUrl = snapshot.val()?.imageUrl || snapshot.val()?.url;
-      if (imgUrl && !imageList.includes(imgUrl)) {
-        imageList.push(imgUrl);
-        createBubble(imgUrl);
+      const data = snapshot.val();
+      const imgUrl = data?.imageUrl || data?.url;
+      // รองรับ key ชื่อผู้ส่งหลายรูปแบบ (name, senderName, displayName) ขึ้นอยู่กับฟอร์มหน้าส่งรูป
+      const name = data?.name || data?.senderName || data?.displayName || '';
+
+      if (imgUrl && !imageList.some(item => item.imgUrl === imgUrl)) {
+        const newItem = { imgUrl, name };
+        imageList.push(newItem);
+        createBubble(newItem);
       }
     });
 
