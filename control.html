@@ -130,21 +130,23 @@
         spawnSpeed: Number(spawnSpeed.value),
         bubbleSize: Number(bubbleSize.value),
         bubbleSpread: Number(bubbleSpread.value)
-      }).then(showSavedStatus);
+      }).then(showSavedStatus).catch(err => console.error("Update failed:", err));
     }
 
+    // แก้ไขจุดบกพร่องตรงนี้: ปลดล็อก isInitialLoad ไม่ว่าจะมีข้อมูลเดิมในฐานข้อมูลหรือไม่ก็ตาม
     onValue(settingsRef, (snapshot) => {
-      if (snapshot.exists() && isInitialLoad) {
+      if (snapshot.exists()) {
         const data = snapshot.val();
         if (data.showQR !== undefined) toggleQr.checked = data.showQR;
         if (data.welcomeText) welcomeText.value = data.welcomeText;
         if (data.spawnSpeed) { spawnSpeed.value = data.spawnSpeed; speedDisplay.innerText = `${data.spawnSpeed} ms`; }
         if (data.bubbleSize) { bubbleSize.value = data.bubbleSize; sizeDisplay.innerText = `${data.bubbleSize}%`; }
         if (data.bubbleSpread) { bubbleSpread.value = data.bubbleSpread; spreadDisplay.innerText = `${data.bubbleSpread}%`; }
-        isInitialLoad = false;
       }
+      isInitialLoad = false; // ปลดล็อกเพื่อให้การขยับสไลเดอร์ครั้งต่อไปสามารถเซฟข้อมูลได้
     }, { onlyOnce: true });
 
+    // ดักจับและสั่ง Save ทันทีเมื่อผู้ใช้ปรับแต่งค่า
     toggleQr.addEventListener('change', saveSettings);
     
     spawnSpeed.addEventListener('input', (e) => { speedDisplay.innerText = `${e.target.value} ms`; saveSettings(); });
