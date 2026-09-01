@@ -8,7 +8,6 @@
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
     * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     
-    /* ตั้งค่าพื้นหลังโปร่งใสสำหรับ OBS Browser Source */
     body { 
       margin: 0; 
       padding: 0; 
@@ -19,9 +18,12 @@
     }
 
     #bubble-container {
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
+      z-index: 1;
     }
 
     /* สไตล์ฟองสบู่วงกลม */
@@ -46,7 +48,6 @@
       border-radius: 50%;
     }
 
-    /* แอนิเมชันฟองสบู่ลอยขึ้นด้านบน */
     @keyframes floatUp {
       0% {
         transform: translateY(0) scale(0.7) rotate(0deg);
@@ -63,11 +64,50 @@
         opacity: 0;
       }
     }
+
+    /* กล่องแสดง QR Code มุมขวาล่าง */
+    .qr-box {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background: rgba(22, 27, 34, 0.85);
+      border: 2px solid #00f0ff;
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+      backdrop-filter: blur(5px);
+      z-index: 10;
+    }
+
+    .qr-box img {
+      width: 130px;
+      height: 130px;
+      border-radius: 8px;
+      background: white;
+      padding: 5px;
+    }
+
+    .qr-box span {
+      color: #00f0ff;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 8px;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+    }
   </style>
 </head>
 <body>
 
   <div id="bubble-container"></div>
+
+  <!-- ส่วนแสดงผล QR Code -->
+  <div class="qr-box" id="qr-box">
+    <img id="qr-image" src="" alt="Scan QR Code">
+    <span>📱 สแกนส่งรูปขึ้นจอ</span>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -87,28 +127,32 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // ดึงรหัสห้องจาก Query String (?room=xxx)
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
-
     const container = document.getElementById('bubble-container');
 
-    // ฟังก์ชันสร้างฟองสบู่วงกลม
+    // 1. สร้าง QR Code สำหรับลิงก์ Donate ของห้องนี้
+    const donateUrl = `https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`;
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(donateUrl)}`;
+    document.getElementById('qr-image').src = qrApiUrl;
+
+    // คลังเก็บรูปภาพทั้งหมดที่ถูกอัปโหลดในห้องนี้
+    const imageList = [];
+    let currentIndex = 0;
+
+    // ฟังก์ชันสร้างฟองสบู่
     function createBubble(imgUrl) {
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       
-      // สุ่มขนาดฟองสบู่ระหว่าง 120px - 200px
       const size = Math.floor(Math.random() * 80) + 120;
       bubble.style.width = `${size}px`;
       bubble.style.height = `${size}px`;
 
-      // สุ่มตำแหน่งตามแนวตั้ง (แกน X)
-      const leftPos = Math.floor(Math.random() * 80) + 5;
+      const leftPos = Math.floor(Math.random() * 75) + 5;
       bubble.style.left = `${leftPos}%`;
 
-      // สุ่มระยะเวลาการลอย (7 - 12 วินาที)
-      const duration = Math.floor(Math.random() * 5) + 7;
+      const duration = Math.floor(Math.random() * 4) + 7;
       bubble.style.animationDuration = `${duration}s`;
 
       const img = document.createElement('img');
@@ -117,20 +161,31 @@
 
       container.appendChild(bubble);
 
-      // ทำความสะอาด Element เมื่อลอยพ้นหน้าจอแล้ว
       setTimeout(() => {
         bubble.remove();
       }, duration * 1000);
     }
 
-    // ดักฟังรูปภาพใหม่ที่ถูกเพิ่มเข้ามาใน Firebase
+    // 2. ดึงรูปทั้งหมดจาก Firebase เก็บเข้าคลัง imageList
     const donationsRef = ref(db, `events/${roomId}/donations`);
     onChildAdded(donationsRef, (snapshot) => {
       const data = snapshot.val();
-      if (data && (data.imageUrl || data.url)) {
-        createBubble(data.imageUrl || data.url);
+      const imgUrl = data?.imageUrl || data?.url;
+      if (imgUrl && !imageList.includes(imgUrl)) {
+        imageList.push(imgUrl);
+        // แสดงผลทันทีเมื่อมีรูปใหม่เข้ามา
+        createBubble(imgUrl);
       }
     });
+
+    // 3. ระบบวนลูปปล่อยฟองสบู่จากรูปในคลังต่อเนื่องทุกๆ 2.5 วินาที
+    setInterval(() => {
+      if (imageList.length > 0) {
+        const imgUrl = imageList[currentIndex];
+        createBubble(imgUrl);
+        currentIndex = (currentIndex + 1) % imageList.length; // วนกลับไปเริ่มรูปแรกเมื่อครบ
+      }
+    }, 2500);
   </script>
 
 </body>
