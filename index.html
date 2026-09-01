@@ -18,8 +18,13 @@
     .input-group { margin-bottom: 20px; margin-top: 15px; }
     label { display: block; font-size: 14px; color: #c9d1d9; margin-bottom: 8px; }
     
-    #room-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #00f0ff; background: #0d1117; color: #fff; font-size: 16px; font-weight: bold; text-align: center; }
+    #room-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #00f0ff; background: #0d1117; color: #fff; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 10px; }
     
+    /* สไตล์ปุ่มบันทึกสร้างห้อง */
+    .btn-save-room { width: 100%; padding: 12px; border: none; border-radius: 6px; background: #00f0ff; color: #0d1117; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-bottom: 15px; }
+    .btn-save-room:hover { background: #00c4d1; }
+    .btn-save-room:disabled { background: #555; color: #888; cursor: not-allowed; }
+
     .link-box { display: flex; gap: 10px; margin-bottom: 12px; }
     .link-box input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #8b949e; font-size: 13px; }
     .btn-copy { padding: 8px 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap; }
@@ -47,6 +52,7 @@
     <div class="input-group">
       <label>1. ตั้งชื่อห้อง (ภาษาอังกฤษ หรือ ตัวเลข):</label>
       <input type="text" id="room-input" placeholder="เช่น event01, wedding" value="default">
+      <button id="btn-save-room" class="btn-save-room">💾 บันทึกเพื่อสร้างห้องใหม่เข้าสู่ระบบ</button>
     </div>
 
     <div class="section-title" style="margin-bottom: 15px;">🔗 ลิงก์สำหรับนำไปใช้งาน</div>
@@ -76,10 +82,28 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+      authDomain: "suchartstudio-9a78d.firebaseapp.com",
+      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suchartstudio-9a78d",
+      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+      messagingSenderId: "953369646185",
+      appId: "1:953369646185:web:018e66f489aad5356ebef8",
+      measurementId: "G-J7M38HNDYD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
     const GITHUB_PAGES_BASE_URL = "https://suchartstudio.github.io/picpost/";
 
     const roomInput = document.getElementById('room-input');
+    const btnSaveRoom = document.getElementById('btn-save-room');
     const overlayInput = document.getElementById('link-overlay');
     const donateInput = document.getElementById('link-donate');
     const recheckInput = document.getElementById('link-recheck');
@@ -93,7 +117,37 @@
       controlInput.value = `${GITHUB_PAGES_BASE_URL}control.html?room=${roomName}`;
     }
 
-    function copyLink(inputId, btnElement) {
+    // ฟังก์ชันบันทึกห้องลงในระบบ Firebase
+    btnSaveRoom.addEventListener('click', async () => {
+      const roomName = roomInput.value.trim();
+      if (!roomName) {
+        alert("กรุณากรอกชื่อห้องก่อนบันทึกครับ");
+        return;
+      }
+
+      btnSaveRoom.disabled = true;
+      btnSaveRoom.innerText = "⏳ กำลังบันทึกข้อมูล...";
+
+      try {
+        // สร้างการตั้งค่าเริ่มต้นให้ห้องนั้นในระบบ
+        await update(ref(db, `events/${roomName}/settings`), {
+          createdAt: Date.now(),
+          showQR: true,
+          showAvatars: true,
+          welcomeText: "ผู้สนับสนุน"
+        });
+
+        alert(`✅ บันทึกสร้างห้อง "${roomName}" เรียบร้อยแล้ว!\nสามารถตรวจสอบได้ที่หน้า Dashboard (ดูห้องทั้งหมด)`);
+      } catch (err) {
+        console.error(err);
+        alert("เกิดข้อผิดพลาดในการบันทึกห้อง กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        btnSaveRoom.disabled = false;
+        btnSaveRoom.innerText = "💾 บันทึกเพื่อสร้างห้องใหม่เข้าสู่ระบบ";
+      }
+    });
+
+    window.copyLink = function(inputId, btnElement) {
       const copyText = document.getElementById(inputId);
       copyText.select();
       copyText.setSelectionRange(0, 99999);
@@ -107,7 +161,7 @@
           btnElement.classList.remove("copied");
         }, 2000);
       }).catch(() => alert("ไม่สามารถคัดลอกได้"));
-    }
+    };
 
     roomInput.addEventListener('input', generateLinks);
     window.onload = generateLinks;
