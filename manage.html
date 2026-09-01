@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการห้อง Event (Dashboard)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+    body { background: #0f1117; color: #e2e8f0; padding: 20px; margin: 0; }
+    
+    .header { max-width: 900px; margin: 0 auto 20px auto; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 15px; }
+    .header h2 { color: #00f0ff; margin: 0; }
+    .btn-new { background: #7928ca; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; transition: 0.2s; }
+    .btn-new:hover { background: #5e1f9d; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; max-width: 900px; margin: 0 auto; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; transition: 0.2s; }
+    .card:hover { border-color: #00f0ff; box-shadow: 0 0 15px rgba(0, 240, 255, 0.1); }
+    
+    .room-name { font-size: 18px; color: #fff; font-weight: 600; margin-bottom: 5px; }
+    .info { font-size: 14px; color: #8b949e; margin-bottom: 15px; }
+    
+    .btn-group { display: flex; flex-direction: column; gap: 8px; }
+    .btn { padding: 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; font-size: 14px; transition: 0.2s; }
+    .btn-edit { background: #00f0ff; color: #0d1117; }
+    .btn-edit:hover { background: #00c4d1; }
+    .btn-delete { background: transparent; color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); }
+    .btn-delete:hover { background: rgba(248, 81, 73, 0.1); border-color: #f85149; }
+    
+    .empty-state { text-align: center; color: #8b949e; grid-column: 1 / -1; padding: 40px; background: #161b22; border-radius: 10px; border: 1px dashed #30363d; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>🗂️ ระบบจัดการห้อง (Dashboard)</h2>
+    <!-- เปลี่ยน href ด้านล่างให้ชี้ไปที่หน้าสร้างลิงก์ของคุณ (เช่น index.html) -->
+    <a href="index.html" class="btn-new">➕ สร้างลิงก์ห้องใหม่</a>
+  </div>
+
+  <div class="grid" id="room-container">
+    <div class="empty-state">⏳ กำลังโหลดข้อมูล...</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+      authDomain: "suchartstudio-9a78d.firebaseapp.com",
+      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suchartstudio-9a78d",
+      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+      messagingSenderId: "953369646185",
+      appId: "1:953369646185:web:018e66f489aad5356ebef8",
+      measurementId: "G-J7M38HNDYD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const container = document.getElementById('room-container');
+
+    onValue(ref(db, 'events'), (snapshot) => {
+      container.innerHTML = '';
+      
+      if (!snapshot.exists()) {
+        container.innerHTML = '<div class="empty-state">ยังไม่มีห้องที่ถูกสร้างในระบบ<br>เริ่มส่งรูปหรือกดสร้างห้องใหม่ได้เลย</div>';
+        return;
+      }
+      
+      snapshot.forEach((childSnap) => {
+        const roomId = childSnap.key;
+        const data = childSnap.val();
+        
+        // นับจำนวนรูปภาพที่มีคนส่งเข้ามาในห้องนี้
+        const picCount = data.donations ? Object.keys(data.donations).length : 0;
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="room-name">📌 ห้อง: ${roomId}</div>
+          <div class="info">รูปภาพที่ส่งมาแล้ว: ${picCount} รูป</div>
+          <div class="btn-group">
+            <a href="control.html?room=${roomId}" target="_blank" class="btn btn-edit">⚙️ เข้าไปตั้งค่าห้อง (Control)</a>
+            <a href="recheck.html?room=${roomId}" target="_blank" class="btn" style="background: rgba(248,81,73,0.1); color: #f85149;">🛡️ จัดการรูประหว่างงาน (Recheck)</a>
+            <button class="btn btn-delete" onclick="deleteRoom('${roomId}')">🗑️ ลบห้องนี้และล้างรูปทั้งหมด</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    });
+
+    // ฟังก์ชันลบห้องแบบผูกกับ Window เพื่อให้ HTML onclick เรียกใช้ได้
+    window.deleteRoom = (roomId) => {
+      if(confirm(`⚠️ อันตราย: คุณต้องการลบห้อง "${roomId}"\nและรูปภาพทั้งหมดที่ผู้ชมส่งมาทิ้งถาวรหรือไม่?`)) {
+        remove(ref(db, `events/${roomId}`));
+      }
+    };
+  </script>
+
+</body>
+</html>
