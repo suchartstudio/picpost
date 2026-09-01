@@ -3,33 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบจัดการลิงก์ห้อง (OBS & Donate)</title>
+  <title>สร้างลิงก์ Event (OBS System)</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
     * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
-    body { background: #0f1117; color: #e2e8f0; padding: 20px; display: flex; justify-content: center; }
+    body { background: #0f1117; color: #e2e8f0; padding: 20px; display: flex; justify-content: center; margin: 0; }
     .container { width: 100%; max-width: 500px; background: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; }
     
-    .section-title { font-size: 16px; font-weight: 600; color: #00f0ff; margin-bottom: 15px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
-    
-    .input-group { margin-bottom: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+    .section-title { font-size: 16px; font-weight: 600; color: #00f0ff; margin: 0; }
+    .btn-manage { background: #30363d; color: #00f0ff; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .btn-manage:hover { background: #484f58; }
+
+    .input-group { margin-bottom: 20px; margin-top: 15px; }
     label { display: block; font-size: 14px; color: #c9d1d9; margin-bottom: 8px; }
     
-    /* สไตล์ช่องกรอกชื่อห้อง */
     #room-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #00f0ff; background: #0d1117; color: #fff; font-size: 16px; font-weight: bold; text-align: center; }
     
-    /* สไตล์กล่องลิงก์และปุ่มคัดลอก */
     .link-box { display: flex; gap: 10px; margin-bottom: 12px; }
     .link-box input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #8b949e; font-size: 13px; }
     .btn-copy { padding: 8px 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap; }
     
-    /* สีปุ่มแยกตามประเภท */
     .btn-obs { background: #7928ca; color: white; }
     .btn-obs:hover { background: #5e1f9d; }
     .btn-donate { background: #00f0ff; color: #0d1117; }
     .btn-donate:hover { background: #00c4d1; }
     .btn-recheck { background: #f85149; color: white; }
     .btn-recheck:hover { background: #d73a33; }
+    .btn-control { background: #238636; color: white; }
+    .btn-control:hover { background: #2ea043; }
     
     .copied { background: #2ea043 !important; color: white !important; }
   </style>
@@ -37,14 +39,17 @@
 <body>
 
   <div class="container">
-    <div class="section-title">🔧 สร้างห้องและลิงก์สำหรับ Event</div>
+    <div class="header">
+      <div class="section-title">🔧 สร้างห้องและลิงก์สำหรับ Event</div>
+      <a href="manage.html" class="btn-manage">🗂️ ดูห้องทั้งหมด</a>
+    </div>
     
     <div class="input-group">
       <label>1. ตั้งชื่อห้อง (ภาษาอังกฤษ หรือ ตัวเลข):</label>
-      <input type="text" id="room-input" placeholder="เช่น event01, wedding_jack" value="default">
+      <input type="text" id="room-input" placeholder="เช่น event01, wedding" value="default">
     </div>
 
-    <div class="section-title">🔗 ลิงก์สำหรับนำไปใช้งาน</div>
+    <div class="section-title" style="margin-bottom: 15px;">🔗 ลิงก์สำหรับนำไปใช้งาน</div>
     
     <label>📺 ลิงก์สำหรับใส่ Browser Source ใน OBS (Overlay)</label>
     <div class="link-box">
@@ -63,57 +68,48 @@
       <input type="text" id="link-recheck" readonly>
       <button class="btn-copy btn-recheck" onclick="copyLink('link-recheck', this)">📋 Copy</button>
     </div>
+
+    <label>⚙️ ลิงก์สำหรับเปิดแผงควบคุม (Control)</label>
+    <div class="link-box">
+      <input type="text" id="link-control" readonly>
+      <button class="btn-copy btn-control" onclick="copyLink('link-control', this)">📋 Copy</button>
+    </div>
   </div>
 
   <script>
-    // 🔴 สิ่งที่ต้องแก้: เปลี่ยน URL ด้านล่างเป็นลิงก์ GitHub Pages ของคุณ 🔴
     const GITHUB_PAGES_BASE_URL = "https://suchartstudio.github.io/picpost/";
 
     const roomInput = document.getElementById('room-input');
     const overlayInput = document.getElementById('link-overlay');
     const donateInput = document.getElementById('link-donate');
     const recheckInput = document.getElementById('link-recheck');
+    const controlInput = document.getElementById('link-control');
 
-    // ฟังก์ชันอัปเดตลิงก์ทั้งหมดเมื่อมีการพิมพ์ชื่อห้อง
     function generateLinks() {
-      // ถ้าช่องว่างเปล่า ให้ใช้คำว่า default
       const roomName = roomInput.value.trim() || 'default';
-      
-      // สร้าง URL โดยใช้ Base URL ของ GitHub Pages
       overlayInput.value = `${GITHUB_PAGES_BASE_URL}overlay.html?room=${roomName}`;
       donateInput.value = `${GITHUB_PAGES_BASE_URL}donate.html?room=${roomName}`;
       recheckInput.value = `${GITHUB_PAGES_BASE_URL}recheck.html?room=${roomName}`;
+      controlInput.value = `${GITHUB_PAGES_BASE_URL}control.html?room=${roomName}`;
     }
 
-    // ฟังก์ชันคัดลอกลง Clipboard
     function copyLink(inputId, btnElement) {
       const copyText = document.getElementById(inputId);
-      
-      // เลือกข้อความใน Input
       copyText.select();
-      copyText.setSelectionRange(0, 99999); // สำหรับมือถือ
+      copyText.setSelectionRange(0, 99999);
       
-      // คัดลอกไปยัง Clipboard
       navigator.clipboard.writeText(copyText.value).then(() => {
-        // เปลี่ยนข้อความปุ่มชั่วคราวเพื่อแจ้งผู้ใช้
         const originalText = btnElement.innerText;
         btnElement.innerText = "✅ Copied!";
         btnElement.classList.add("copied");
-        
-        // คืนค่าปุ่มกลับมาหลังผ่านไป 2 วินาที
         setTimeout(() => {
           btnElement.innerText = originalText;
           btnElement.classList.remove("copied");
         }, 2000);
-      }).catch(err => {
-        alert("ไม่สามารถคัดลอกได้ กรุณาคัดลอกด้วยตนเอง");
-      });
+      }).catch(() => alert("ไม่สามารถคัดลอกได้"));
     }
 
-    // ดักจับเหตุการณ์เมื่อผู้ใช้พิมพ์ชื่อห้อง ให้สร้างลิงก์ใหม่ทันที
     roomInput.addEventListener('input', generateLinks);
-
-    // ทำงานครั้งแรกเมื่อโหลดหน้าเว็บ
     window.onload = generateLinks;
   </script>
 
