@@ -2,30 +2,127 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ระบบคัดกรองรูปภาพ (Moderation)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recheck System</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&display=swap');
-    body { font-family: 'Kanit', sans-serif; background: #0f1117; color: #e2e8f0; margin: 0; padding: 20px; }
-    h2 { color: #00f0ff; text-align: center; margin-bottom: 5px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; padding: 20px; }
-    .card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-    .card img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #30363d; margin-bottom: 10px; }
-    .card .name { font-weight: 600; margin-bottom: 10px; word-break: break-all; }
-    .btn-delete { background: #f85149; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%; }
-    .btn-delete:hover { background: #da3633; }
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+    
+    :root {
+      --card-size: 150px;
+    }
+
+    body { 
+      background: #0f1117; 
+      color: #e2e8f0; 
+      margin: 0; 
+      padding: 15px; 
+    }
+
+    /* แถบควบคุมขนาดภาพแบบไม่มีหัวข้อ */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(22, 27, 34, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid #30363d;
+      padding: 10px 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 350px;
+    }
+
+    .slider-container label {
+      font-size: 14px;
+      color: #00f0ff;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: #00f0ff;
+      cursor: pointer;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-size), 1fr));
+      gap: 12px;
+    }
+
+    .img-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s;
+    }
+
+    .img-card:hover {
+      border-color: #f85149;
+    }
+
+    .img-card img {
+      width: 100%;
+      height: var(--card-size);
+      object-fit: cover;
+      display: block;
+    }
+
+    .btn-delete {
+      width: 100%;
+      padding: 6px;
+      background: #f85149;
+      color: white;
+      border: none;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: #d73a33;
+    }
+
+    .empty-msg {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: #8b949e;
+      padding: 50px;
+    }
   </style>
 </head>
 <body>
-  <h2>🛡️ ระบบตรวจและลบรูปภาพ (Real-time)</h2>
-  <div style="text-align: center; color: #8b949e; margin-bottom: 20px;">
-    ห้องปัจจุบัน: <strong id="room-name-display" style="color:#00f0ff;"></strong>
+
+  <div class="top-bar">
+    <div class="slider-container">
+      <label>🔍 ปรับขนาดภาพ:</label>
+      <input type="range" id="size-slider" min="80" max="350" value="150">
+    </div>
   </div>
-  
-  <div class="grid" id="image-grid"></div>
+
+  <div class="grid" id="gallery-grid">
+    <div class="empty-msg">⏳ กำลังโหลดรูปภาพ...</div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onChildAdded, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
@@ -40,46 +137,52 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
-    
-    document.getElementById('room-name-display').innerText = roomId;
-    const grid = document.getElementById('image-grid');
 
-    onChildAdded(ref(db, `events/${roomId}/donations`), (snapshot) => {
-      const data = snapshot.val();
-      const key = snapshot.key;
+    const galleryGrid = document.getElementById('gallery-grid');
+    const sizeSlider = document.getElementById('size-slider');
 
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.id = `card-${key}`;
+    // ปรับขนาดการแสดงผลรูปภาพผ่าน CSS Variable เมื่อมีการเลื่อนสไลเดอร์
+    sizeSlider.addEventListener('input', (e) => {
+      document.documentElement.style.setProperty('--card-size', `${e.target.value}px`);
+    });
 
-      const img = document.createElement('img');
-      img.src = data.imageUrl;
+    // ดึงรูปภาพทั้งหมดมาแสดงผล Realtime
+    const donationsRef = ref(db, `events/${roomId}/donations`);
+    onValue(donationsRef, (snapshot) => {
+      galleryGrid.innerHTML = '';
 
-      const name = document.createElement('div');
-      name.className = 'name';
-      name.innerText = data.name;
+      if (!snapshot.exists()) {
+        galleryGrid.innerHTML = '<div class="empty-msg">ไม่มีรูปภาพในระบบ</div>';
+        return;
+      }
 
-      const btn = document.createElement('button');
-      btn.className = 'btn-delete';
-      btn.innerText = '🗑️ ลบทิ้งทันที';
-      btn.onclick = () => {
-        if(confirm(`ต้องการลบรูปของ "${data.name}" ออกจากหน้าจอเดี๋ยวนี้หรือไม่?`)) {
-          remove(ref(db, `events/${roomId}/donations/${key}`));
+      snapshot.forEach((childSnap) => {
+        const photoId = childSnap.key;
+        const data = childSnap.val();
+        const imgUrl = data.imageUrl || data.url;
+
+        if (imgUrl) {
+          const card = document.createElement('div');
+          card.className = 'img-card';
+          card.innerHTML = `
+            <img src="${imgUrl}" alt="Photo">
+            <button class="btn-delete" onclick="deletePhoto('${photoId}')">🗑️ ลบรูปนี้</button>
+          `;
+          galleryGrid.appendChild(card);
         }
-      };
-
-      card.appendChild(img);
-      card.appendChild(name);
-      card.appendChild(btn);
-      grid.prepend(card);
+      });
     });
 
-    onChildRemoved(ref(db, `events/${roomId}/donations`), (snapshot) => {
-      const el = document.getElementById(`card-${snapshot.key}`);
-      if (el) el.remove();
-    });
+    // ฟังก์ชันสั่งลบรูปภาพจากระบบ
+    window.deletePhoto = (photoId) => {
+      if (confirm('คุณต้องการลบรูปนี้ใช่หรือไม่?')) {
+        remove(ref(db, `events/${roomId}/donations/${photoId}`));
+      }
+    };
   </script>
+
 </body>
 </html>
