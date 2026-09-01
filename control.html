@@ -38,18 +38,15 @@
 <body>
 
   <div class="container">
-    
-    <!-- ฟังก์ชันจัดการห้องที่นำกลับมา (เอาหัวข้อออก) -->
     <div class="card">
       <button class="btn-danger" id="btn-clear-photos">🗑️ ล้างรูปภาพทั้งหมดในห้องนี้</button>
     </div>
 
-    <!-- ฟังก์ชันควบคุม Realtime -->
     <div class="card">
       <div class="section-title">⚙️ ตั้งค่าหน้าจอ Overlay (Realtime)</div>
       
       <div class="input-group switch-container">
-        <span>📱 แสดง QR Code บนจอ (มุมขวาล่าง)</span>
+        <span>📱 แสดง QR Code บนจอ</span>
         <input type="checkbox" id="toggle-qr">
       </div>
 
@@ -59,10 +56,26 @@
       </div>
 
       <div class="input-group">
-        <label>🫧 ความเร็วการปล่อยฟองสบู่ (น้อย = ถี่มาก)</label>
+        <label>🫧 ความเร็วการปล่อยสบู่ (น้อย = ถี่มาก)</label>
         <div class="slider-container">
           <input type="range" id="spawn-speed" min="1000" max="6000" step="500" value="2500">
           <div class="val-display" id="speed-display">2500 ms</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>🔍 ขนาดฟองสบู่ (ซูมเข้า/ออก)</label>
+        <div class="slider-container">
+          <input type="range" id="bubble-size" min="50" max="200" step="10" value="100">
+          <div class="val-display" id="size-display">100%</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>↔️ ระยะการกระจายตัว (ลดการบังซ้อนทับกัน)</label>
+        <div class="slider-container">
+          <input type="range" id="bubble-spread" min="30" max="100" step="5" value="80">
+          <div class="val-display" id="spread-display">80%</div>
         </div>
       </div>
 
@@ -81,8 +94,7 @@
       projectId: "suchartstudio-9a78d",
       storageBucket: "suchartstudio-9a78d.firebasestorage.app",
       messagingSenderId: "953369646185",
-      appId: "1:953369646185:web:018e66f489aad5356ebef8",
-      measurementId: "G-J7M38HNDYD"
+      appId: "1:953369646185:web:018e66f489aad5356ebef8"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -95,9 +107,13 @@
     const toggleQr = document.getElementById('toggle-qr');
     const welcomeText = document.getElementById('welcome-text');
     const spawnSpeed = document.getElementById('spawn-speed');
+    const bubbleSize = document.getElementById('bubble-size');
+    const bubbleSpread = document.getElementById('bubble-spread');
+    
     const speedDisplay = document.getElementById('speed-display');
+    const sizeDisplay = document.getElementById('size-display');
+    const spreadDisplay = document.getElementById('spread-display');
     const saveStatus = document.getElementById('save-status');
-    const btnClearPhotos = document.getElementById('btn-clear-photos');
 
     let isInitialLoad = true;
 
@@ -106,54 +122,44 @@
       setTimeout(() => saveStatus.classList.remove('show'), 1500);
     }
 
-    // ฟังก์ชันส่งค่าทุกอย่างเข้า Firebase (Realtime)
     function saveSettings() {
-      if (isInitialLoad) return; // ป้องกันการส่งค่าทับตอนโหลดหน้าครั้งแรก
-      
+      if (isInitialLoad) return;
       update(settingsRef, {
         showQR: toggleQr.checked,
         welcomeText: welcomeText.value,
-        spawnSpeed: Number(spawnSpeed.value)
-      }).then(() => {
-        showSavedStatus();
-      });
+        spawnSpeed: Number(spawnSpeed.value),
+        bubbleSize: Number(bubbleSize.value),
+        bubbleSpread: Number(bubbleSpread.value)
+      }).then(showSavedStatus);
     }
 
-    // ดึงค่าปัจจุบันมาแสดงตอนเปิดหน้า (ทำแค่ครั้งเดียว)
     onValue(settingsRef, (snapshot) => {
       if (snapshot.exists() && isInitialLoad) {
         const data = snapshot.val();
         if (data.showQR !== undefined) toggleQr.checked = data.showQR;
         if (data.welcomeText) welcomeText.value = data.welcomeText;
-        if (data.spawnSpeed) {
-          spawnSpeed.value = data.spawnSpeed;
-          speedDisplay.innerText = `${data.spawnSpeed} ms`;
-        }
+        if (data.spawnSpeed) { spawnSpeed.value = data.spawnSpeed; speedDisplay.innerText = `${data.spawnSpeed} ms`; }
+        if (data.bubbleSize) { bubbleSize.value = data.bubbleSize; sizeDisplay.innerText = `${data.bubbleSize}%`; }
+        if (data.bubbleSpread) { bubbleSpread.value = data.bubbleSpread; spreadDisplay.innerText = `${data.bubbleSpread}%`; }
         isInitialLoad = false;
       }
     }, { onlyOnce: true });
 
-    // ดักจับเหตุการณ์การเปลี่ยนแปลงทั้งหมดเพื่ออัปเดต Realtime
     toggleQr.addEventListener('change', saveSettings);
     
-    spawnSpeed.addEventListener('input', (e) => {
-      speedDisplay.innerText = `${e.target.value} ms`;
-      saveSettings(); // อัปเดตทันทีที่ลากสไลเดอร์
-    });
+    spawnSpeed.addEventListener('input', (e) => { speedDisplay.innerText = `${e.target.value} ms`; saveSettings(); });
+    bubbleSize.addEventListener('input', (e) => { sizeDisplay.innerText = `${e.target.value}%`; saveSettings(); });
+    bubbleSpread.addEventListener('input', (e) => { spreadDisplay.innerText = `${e.target.value}%`; saveSettings(); });
+    
+    welcomeText.addEventListener('input', () => saveSettings());
 
-    welcomeText.addEventListener('input', () => {
-      saveSettings(); // อัปเดตทันทีที่พิมพ์ข้อความแต่ละตัวอักษร
-    });
-
-    // ฟังก์ชันล้างรูปภาพ (ที่ถูกนำกลับมา)
-    btnClearPhotos.addEventListener('click', () => {
-      if(confirm('⚠️ ยืนยันการลบรูปภาพทั้งหมดของห้องนี้ออกจากระบบ?')) {
+    document.getElementById('btn-clear-photos').addEventListener('click', () => {
+      if(confirm('⚠️ ล้างรูปภาพทั้งหมดหรือไม่?')) {
         remove(ref(db, `events/${roomId}/donations`))
-          .then(() => alert('✅ ลบรูปภาพทั้งหมดเรียบร้อยแล้ว'))
-          .catch(err => alert('❌ เกิดข้อผิดพลาด: ' + err.message));
+          .then(() => alert('✅ ล้างรูปภาพสำเร็จ'))
+          .catch(err => alert('❌ Error: ' + err.message));
       }
     });
   </script>
-
 </body>
 </html>
