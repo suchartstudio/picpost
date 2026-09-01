@@ -35,7 +35,6 @@
 
   <div class="header">
     <h2>🗂️ ระบบจัดการห้อง (Dashboard)</h2>
-    <!-- เปลี่ยน href ด้านล่างให้ชี้ไปที่หน้าสร้างลิงก์ของคุณ (เช่น index.html) -->
     <a href="index.html" class="btn-new">➕ สร้างลิงก์ห้องใหม่</a>
   </div>
 
@@ -73,8 +72,6 @@
       snapshot.forEach((childSnap) => {
         const roomId = childSnap.key;
         const data = childSnap.val();
-        
-        // นับจำนวนรูปภาพที่มีคนส่งเข้ามาในห้องนี้
         const picCount = data.donations ? Object.keys(data.donations).length : 0;
         
         const card = document.createElement('div');
@@ -92,7 +89,6 @@
       });
     });
 
-    // ฟังก์ชันลบห้องแบบผูกกับ Window เพื่อให้ HTML onclick เรียกใช้ได้
     window.deleteRoom = (roomId) => {
       if(confirm(`⚠️ อันตราย: คุณต้องการลบห้อง "${roomId}"\nและรูปภาพทั้งหมดที่ผู้ชมส่งมาทิ้งถาวรหรือไม่?`)) {
         remove(ref(db, `events/${roomId}`));
