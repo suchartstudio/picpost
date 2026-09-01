@@ -11,171 +11,157 @@
     body { background: #0f1117; color: #e2e8f0; padding: 20px; display: flex; justify-content: center; margin: 0; }
     .container { width: 100%; max-width: 500px; }
     
-    .card { background: #161b22ปรับปรุงโค้ดให้รองรับความต้องการทั้ง 5 ข้อเรียบร้อยแล้ว สามารถคัดลอกไปรันเป็นไฟล์ `.html` เพื่อดูผลลัพธ์และนำไปปรับใช้กับระบบเดิมได้ทันที
+    .card { background: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 20px; }
+    .section-title { font-size: 16px; font-weight: 600; color: #00f0ff; margin-bottom: 15px; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+    
+    .input-group { margin-bottom: 15px; }
+    label { display: block; font-size: 14px; color: #c9d1d9; margin-bottom: 8px; font-weight: 500; }
+    
+    input[type="text"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; transition: 0.2s; }
+    input[type="text"]:focus { border-color: #00f0ff; outline: none; }
+    
+    .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0d1117; padding: 10px 15px; border-radius: 6px; border: 1px solid #30363d; }
+    .switch-container span { font-size: 14px; color: #fff; }
+    input[type="checkbox"] { width: 20px; height: 20px; accent-color: #00f0ff; cursor: pointer; }
+    
+    .slider-container { display: flex; align-items: center; gap: 15px; }
+    input[type="range"] { flex: 1; accent-color: #00f0ff; cursor: pointer; }
+    .val-display { background: #0d1117; border: 1px solid #30363d; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; color: #00f0ff; min-width: 70px; text-align: center; }
 
-```html
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Floating Profiles</title>
-    <style>
-        :root {
-            /* 4. ปรับขนาด QR Code ตรงนี้ */
-            --qr-size: 150px; 
-        }
+    .btn-danger { width: 100%; padding: 12px; border: none; border-radius: 6px; background: transparent; border: 1px solid rgba(248, 81, 73, 0.5); color: #f85149; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+    .btn-danger:hover { background: rgba(248, 81, 73, 0.1); border-color: #f85149; }
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #1a1a2e;
-            font-family: 'Kanit', sans-serif;
-        }
-
-        /* ตั้งค่า QR Code */
-        .qr-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: var(--qr-size);
-            height: var(--qr-size);
-            background: white;
-            padding: 10px;
-            border-radius: 10px;
-            z-index: 10;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .qr-container img {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* 3. สไตล์สำหรับคนที่เพิ่งเข้ามา (เด้งกลางจอ) */
-        .highlight-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            z-index: 1000;
-        }
-        
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; } /* ขยายให้ใหญ่ขึ้นกลางจอ */
-        }
-
-        /* สไตล์หลักของวงกลมที่ลอยขึ้น */
-        .bubble-wrapper {
-            position: absolute;
-            bottom: -200px;
-            animation: floatUp 8s linear forwards;
-            z-index: 1;
-        }
-
-        /* 5. เอฟเฟกต์โยกซ้ายขวาเบาๆ */
-        .bubble-inner {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            animation: sway 3s ease-in-out infinite;
-        }
-
-        @keyframes floatUp {
-            0% { bottom: -200px; opacity: 1; }
-            100% { bottom: 110vh; opacity: 0.8; }
-        }
-
-        @keyframes sway {
-            0%, 100% { transform: translateX(-15px); }
-            50% { transform: translateX(15px); }
-        }
-
-        .circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid white; /* สีเส้นขอบจะถูกสุ่มทับด้วย JS */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        /* 1. ปรับขนาดชื่อให้ใหญ่ขึ้น */
-        .name {
-            color: white;
-            font-size: 24px; 
-            font-weight: bold;
-            margin-top: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            text-align: center;
-        }
-    </style>
+    .status-text { text-align: center; font-size: 13px; color: #2ea043; font-weight: 600; margin-top: 10px; height: 20px; opacity: 0; transition: opacity 0.3s; }
+    .status-text.show { opacity: 1; }
+  </style>
 </head>
 <body>
 
-    <div class="qr-container">
-        <!-- ใส่รูป QR Code ของคุณที่นี่ -->
-        <img src="[https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=Register](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=Register)" alt="QR Code">
+  <div class="container">
+    <div class="card">
+      <button class="btn-danger" id="btn-clear-photos">🗑️ ล้างรูปภาพทั้งหมดในห้องนี้</button>
     </div>
 
-    <script>
-        // 2. ฟังก์ชันสุ่มสีเส้นขอบไม่ให้ซ้ำกัน
-        function getRandomColor() {
-            const hue = Math.floor(Math.random() * 360);
-            return `hsl(${hue}, 80%, 65%)`; // ใช้ HSL เพื่อให้ได้สีที่สดใสเสมอ
-        }
+    <div class="card">
+      <div class="section-title">⚙️ ตั้งค่าหน้าจอ Overlay (Realtime)</div>
+      
+      <div class="input-group switch-container">
+        <span>📱 แสดง QR Code บนจอ</span>
+        <input type="checkbox" id="toggle-qr">
+      </div>
 
-        function addPerson(name, profileImgSrc) {
-            // สร้าง Wrapper
-            const wrapper = document.createElement('div');
-            wrapper.className = 'highlight-center'; // เริ่มต้นด้วยการเด้งกลางจอ (ข้อ 3)
+      <div class="input-group">
+        <label>✍️ ข้อความกำกับใต้ QR Code</label>
+        <input type="text" id="welcome-text" placeholder="เช่น สแกนส่งรูปขึ้นจอ">
+      </div>
 
-            // สร้าง Inner สำหรับทำส่าย (ข้อ 5)
-            const inner = document.createElement('div');
-            inner.className = 'bubble-inner';
+      <div class="input-group">
+        <label>🫧 ความเร็วการปล่อยสบู่ (น้อย = ถี่มาก)</label>
+        <div class="slider-container">
+          <input type="range" id="spawn-speed" min="1000" max="6000" step="500" value="2500">
+          <div class="val-display" id="speed-display">2500 ms</div>
+        </div>
+      </div>
 
-            // สร้างรูปโปรไฟล์
-            const circle = document.createElement('img');
-            circle.className = 'circle';
-            circle.src = profileImgSrc;
-            circle.style.borderColor = getRandomColor(); // ใช้สีสุ่ม (ข้อ 2)
+      <div class="input-group">
+        <label>🔍 ขนาดฟองสบู่ (ซูมเข้า/ออก)</label>
+        <div class="slider-container">
+          <input type="range" id="bubble-size" min="50" max="200" step="10" value="100">
+          <div class="val-display" id="size-display">100%</div>
+        </div>
+      </div>
 
-            // สร้างชื่อ (ข้อ 1 - ขนาดปรับใน CSS .name)
-            const nameLabel = document.createElement('div');
-            nameLabel.className = 'name';
-            nameLabel.innerText = name;
+      <div class="input-group">
+        <label>↔️ ระยะการกระจายตัว (ลดการบังซ้อนทับกัน)</label>
+        <div class="slider-container">
+          <input type="range" id="bubble-spread" min="30" max="100" step="5" value="80">
+          <div class="val-display" id="spread-display">80%</div>
+        </div>
+      </div>
 
-            // ประกอบร่าง HTML
-            inner.appendChild(circle);
-            inner.appendChild(nameLabel);
-            wrapper.appendChild(inner);
-            document.body.appendChild(wrapper);
+      <div class="status-text" id="save-status">✅ ส่งค่าอัปเดตไปที่จอ Overlay แล้ว</div>
+    </div>
+  </div>
 
-            // 3. หน่วงเวลา 3 วินาที จากนั้นเปลี่ยนจากกลางจอเป็นลอยขึ้น
-            setTimeout(() => {
-                wrapper.className = 'bubble-wrapper';
-                // สุ่มตำแหน่งซ้ายขวา (10% - 90% ของหน้าจอ) ตอนเริ่มลอย
-                wrapper.style.left = Math.floor(Math.random() * 80 + 10) + 'vw';
-                
-                // ทำความสะอาด DOM หลังจากลอยพ้นจอไปแล้ว (ประมาณ 8 วินาทีตาม CSS)
-                setTimeout(() => {
-                    wrapper.remove();
-                }, 8000);
-            }, 3000);
-        }
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // --- สำหรับทดสอบระบบ ---
-        // จำลองการมีคนสแกนเข้ามาใหม่ทุกๆ 4 วินาที
-        let count = 1;
-        setInterval(() => {
-            // ดึงรูปโปรไฟล์แบบสุ่มมาทดสอบ
-            addPerson(`ผู้ใช้งาน ${count}`, `[https://i.pravatar.cc/150?img=$](https://i.pravatar.cc/150?img=$){count}`);
-            count++;
-        }, 4000);
-    </script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+      authDomain: "suchartstudio-9a78d.firebaseapp.com",
+      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suchartstudio-9a78d",
+      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+      messagingSenderId: "953369646185",
+      appId: "1:953369646185:web:018e66f489aad5356ebef8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default';
+    const settingsRef = ref(db, `events/${roomId}/settings`);
+
+    const toggleQr = document.getElementById('toggle-qr');
+    const welcomeText = document.getElementById('welcome-text');
+    const spawnSpeed = document.getElementById('spawn-speed');
+    const bubbleSize = document.getElementById('bubble-size');
+    const bubbleSpread = document.getElementById('bubble-spread');
+    
+    const speedDisplay = document.getElementById('speed-display');
+    const sizeDisplay = document.getElementById('size-display');
+    const spreadDisplay = document.getElementById('spread-display');
+    const saveStatus = document.getElementById('save-status');
+
+    let isInitialLoad = true;
+
+    function showSavedStatus() {
+      saveStatus.classList.add('show');
+      setTimeout(() => saveStatus.classList.remove('show'), 1500);
+    }
+
+    function saveSettings() {
+      if (isInitialLoad) return;
+      update(settingsRef, {
+        showQR: toggleQr.checked,
+        welcomeText: welcomeText.value,
+        spawnSpeed: Number(spawnSpeed.value),
+        bubbleSize: Number(bubbleSize.value),
+        bubbleSpread: Number(bubbleSpread.value)
+      }).then(showSavedStatus).catch(err => console.error("Update failed:", err));
+    }
+
+    // แก้ไขจุดบกพร่องตรงนี้: ปลดล็อก isInitialLoad ไม่ว่าจะมีข้อมูลเดิมในฐานข้อมูลหรือไม่ก็ตาม
+    onValue(settingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data.showQR !== undefined) toggleQr.checked = data.showQR;
+        if (data.welcomeText) welcomeText.value = data.welcomeText;
+        if (data.spawnSpeed) { spawnSpeed.value = data.spawnSpeed; speedDisplay.innerText = `${data.spawnSpeed} ms`; }
+        if (data.bubbleSize) { bubbleSize.value = data.bubbleSize; sizeDisplay.innerText = `${data.bubbleSize}%`; }
+        if (data.bubbleSpread) { bubbleSpread.value = data.bubbleSpread; spreadDisplay.innerText = `${data.bubbleSpread}%`; }
+      }
+      isInitialLoad = false; // ปลดล็อกเพื่อให้การขยับสไลเดอร์ครั้งต่อไปสามารถเซฟข้อมูลได้
+    }, { onlyOnce: true });
+
+    // ดักจับและสั่ง Save ทันทีเมื่อผู้ใช้ปรับแต่งค่า
+    toggleQr.addEventListener('change', saveSettings);
+    
+    spawnSpeed.addEventListener('input', (e) => { speedDisplay.innerText = `${e.target.value} ms`; saveSettings(); });
+    bubbleSize.addEventListener('input', (e) => { sizeDisplay.innerText = `${e.target.value}%`; saveSettings(); });
+    bubbleSpread.addEventListener('input', (e) => { spreadDisplay.innerText = `${e.target.value}%`; saveSettings(); });
+    
+    welcomeText.addEventListener('input', () => saveSettings());
+
+    document.getElementById('btn-clear-photos').addEventListener('click', () => {
+      if(confirm('⚠️ ล้างรูปภาพทั้งหมดหรือไม่?')) {
+        remove(ref(db, `events/${roomId}/donations`))
+          .then(() => alert('✅ ล้างรูปภาพสำเร็จ'))
+          .catch(err => alert('❌ Error: ' + err.message));
+      }
+    });
+  </script>
 </body>
 </html>
