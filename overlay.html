@@ -8,28 +8,12 @@
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
     * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     
-    body { 
-      margin: 0; 
-      padding: 0; 
-      width: 100vw; 
-      height: 100vh; 
-      overflow: hidden; 
-      background: transparent; 
-    }
+    body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+    #bubble-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-    #bubble-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    /* ฟองสบู่วงกลม */
     .bubble {
       position: absolute;
-      bottom: -180px;
+      bottom: -300px;
       border-radius: 50%;
       border: 4px solid #00f0ff;
       box-shadow: 0 0 20px rgba(0, 240, 255, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.5);
@@ -38,68 +22,31 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: floatUp 8s linear forwards;
+      animation: floatUp 9s linear forwards;
     }
 
-    .bubble img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-    }
+    .bubble img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
     @keyframes floatUp {
-      0% {
-        transform: translateY(0) scale(0.7) rotate(0deg);
-        opacity: 0;
-      }
+      0% { transform: translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
       10% { opacity: 1; }
       90% { opacity: 1; }
-      100% {
-        transform: translateY(-115vh) scale(1.1) rotate(15deg);
-        opacity: 0;
-      }
+      100% { transform: translateY(-120vh) scale(1.1) rotate(15deg); opacity: 0; }
     }
 
-    /* QR Code มุมจอ */
     .qr-box {
-      position: fixed;
-      bottom: 25px;
-      right: 25px;
-      background: rgba(22, 27, 34, 0.85);
-      border: 2px solid #00f0ff;
-      border-radius: 16px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
-      backdrop-filter: blur(5px);
-      z-index: 10;
-      transition: all 0.3s ease;
+      position: fixed; bottom: 25px; right: 25px; background: rgba(22, 27, 34, 0.85);
+      border: 2px solid #00f0ff; border-radius: 16px; padding: 12px;
+      display: flex; flex-direction: column; align-items: center;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); backdrop-filter: blur(5px); z-index: 10;
     }
-
-    .qr-box img {
-      width: 130px;
-      height: 130px;
-      border-radius: 8px;
-      background: white;
-      padding: 5px;
-    }
-
-    .qr-box span {
-      color: #00f0ff;
-      font-size: 13px;
-      font-weight: 600;
-      margin-top: 8px;
-      text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-    }
+    .qr-box img { width: 130px; height: 130px; border-radius: 8px; background: white; padding: 5px; }
+    .qr-box span { color: #00f0ff; font-size: 13px; font-weight: 600; margin-top: 8px; text-shadow: 0 0 5px rgba(0, 0, 0, 0.8); }
   </style>
 </head>
 <body>
 
   <div id="bubble-container"></div>
-
   <div class="qr-box" id="qr-box">
     <img id="qr-image" src="" alt="Scan QR Code">
     <span id="qr-text">📱 สแกนส่งรูปขึ้นจอ</span>
@@ -116,64 +63,63 @@
       projectId: "suchartstudio-9a78d",
       storageBucket: "suchartstudio-9a78d.firebasestorage.app",
       messagingSenderId: "953369646185",
-      appId: "1:953369646185:web:018e66f489aad5356ebef8",
-      measurementId: "G-J7M38HNDYD"
+      appId: "1:953369646185:web:018e66f489aad5356ebef8"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
     
+    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
+
     const container = document.getElementById('bubble-container');
-    const qrBox = document.getElementById('qr-box');
-    const qrText = document.getElementById('qr-text');
-
-    // สร้าง QR Code อ้างอิงจากลิงก์ Donate
-    const donateUrl = `https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`;
-    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(donateUrl)}`;
-
     const imageList = [];
+    
     let currentIndex = 0;
     let loopTimer = null;
-    let spawnSpeed = 2500; // ค่าเริ่มต้นปล่อยฟองสบู่ทุก 2.5 วินาที
+    let spawnSpeed = 2500;
+    let bubbleScale = 1;
+    let spreadArea = 80;
+    let lastLeftPos = -100; // ไว้เก็บตำแหน่งล่าสุด ป้องกันฟองสบู่บังกัน
 
-    // 1. ฟังการตั้งค่าจากหน้า Control แบบ Realtime
     const settingsRef = ref(db, `events/${roomId}/settings`);
     onValue(settingsRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const settings = snapshot.val();
 
-      // สั่ง ปิด/เปิด QR Code
-      if (settings.showQR === false) {
-        qrBox.style.display = 'none';
-      } else {
-        qrBox.style.display = 'flex';
-      }
-
-      // เปลี่ยนข้อความใต้ QR Code
-      if (settings.welcomeText) {
-        qrText.innerText = settings.welcomeText;
-      }
-
-      // ปรับความเร็วการปล่อยฟองสบู่ (ถ้าหน้า control มีการส่งค่า speed/interval)
+      document.getElementById('qr-box').style.display = settings.showQR === false ? 'none' : 'flex';
+      if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
+      if (settings.bubbleSize) bubbleScale = settings.bubbleSize / 100;
+      if (settings.bubbleSpread) spreadArea = settings.bubbleSpread;
+      
       if (settings.spawnSpeed && settings.spawnSpeed !== spawnSpeed) {
         spawnSpeed = Number(settings.spawnSpeed);
         resetLoopTimer();
       }
     });
 
-    // 2. ฟังก์ชันสร้างฟองสบู่
     function createBubble(imgUrl) {
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       
-      const size = Math.floor(Math.random() * 80) + 120;
-      bubble.style.width = `${size}px`;
-      bubble.style.height = `${size}px`;
+      // คำนวณขนาดภาพตามที่รับค่ามาจาก Control
+      const baseSize = Math.floor(Math.random() * 80) + 120;
+      const finalSize = baseSize * bubbleScale;
+      bubble.style.width = `${finalSize}px`;
+      bubble.style.height = `${finalSize}px`;
 
-      const leftPos = Math.floor(Math.random() * 75) + 5;
+      // อัลกอริทึมสุ่มตำแหน่ง เพื่อลดการซ้อนทับ
+      let leftPos;
+      let attempts = 0;
+      const margin = (100 - spreadArea) / 2; 
+
+      do {
+        leftPos = margin + Math.floor(Math.random() * spreadArea);
+        attempts++;
+      } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15); // ถ้าสุ่มได้จุดใกล้ของเดิม (ห่างไม่ถึง 15%) ให้สุ่มใหม่
+      
+      lastLeftPos = leftPos;
       bubble.style.left = `${leftPos}%`;
 
       const duration = Math.floor(Math.random() * 4) + 7;
@@ -182,27 +128,21 @@
       const img = document.createElement('img');
       img.src = imgUrl;
       bubble.appendChild(img);
-
       container.appendChild(bubble);
 
-      setTimeout(() => {
-        bubble.remove();
-      }, duration * 1000);
+      setTimeout(() => bubble.remove(), duration * 1000);
     }
 
-    // 3. ดึงรูปทั้งหมดเก็บเข้า คลัง imageList
-    const donationsRef = ref(db, `events/${roomId}/donations`);
-    onChildAdded(donationsRef, (snapshot) => {
-      const data = snapshot.val();
-      const imgUrl = data?.imageUrl || data?.url;
+    onChildAdded(ref(db, `events/${roomId}/donations`), (snapshot) => {
+      const imgUrl = snapshot.val()?.imageUrl || snapshot.val()?.url;
       if (imgUrl && !imageList.includes(imgUrl)) {
         imageList.push(imgUrl);
         createBubble(imgUrl);
       }
     });
 
-    // 4. วนลูปปล่อยฟองสบู่
-    function startLoopTimer() {
+    function resetLoopTimer() {
+      if (loopTimer) clearInterval(loopTimer);
       loopTimer = setInterval(() => {
         if (imageList.length > 0) {
           createBubble(imageList[currentIndex]);
@@ -210,13 +150,7 @@
         }
       }, spawnSpeed);
     }
-
-    function resetLoopTimer() {
-      if (loopTimer) clearInterval(loopTimer);
-      startLoopTimer();
-    }
-
-    startLoopTimer();
+    resetLoopTimer();
   </script>
 
 </body>
