@@ -17,19 +17,19 @@
     .input-group { margin-bottom: 15px; }
     label { display: block; font-size: 14px; color: #c9d1d9; margin-bottom: 8px; font-weight: 500; }
     
-    /* สไตล์ Input และ Checkbox */
     input[type="text"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; transition: 0.2s; }
     input[type="text"]:focus { border-color: #00f0ff; outline: none; }
     
     .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0d1117; padding: 10px 15px; border-radius: 6px; border: 1px solid #30363d; }
     .switch-container span { font-size: 14px; color: #fff; }
-    
     input[type="checkbox"] { width: 20px; height: 20px; accent-color: #00f0ff; cursor: pointer; }
     
-    /* สไตล์ Slider */
     .slider-container { display: flex; align-items: center; gap: 15px; }
     input[type="range"] { flex: 1; accent-color: #00f0ff; cursor: pointer; }
     .val-display { background: #0d1117; border: 1px solid #30363d; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; color: #00f0ff; min-width: 70px; text-align: center; }
+
+    .btn-danger { width: 100%; padding: 12px; border: none; border-radius: 6px; background: transparent; border: 1px solid rgba(248, 81, 73, 0.5); color: #f85149; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+    .btn-danger:hover { background: rgba(248, 81, 73, 0.1); border-color: #f85149; }
 
     .status-text { text-align: center; font-size: 13px; color: #2ea043; font-weight: 600; margin-top: 10px; height: 20px; opacity: 0; transition: opacity 0.3s; }
     .status-text.show { opacity: 1; }
@@ -38,6 +38,13 @@
 <body>
 
   <div class="container">
+    
+    <!-- ฟังก์ชันจัดการห้องที่นำกลับมา (เอาหัวข้อออก) -->
+    <div class="card">
+      <button class="btn-danger" id="btn-clear-photos">🗑️ ล้างรูปภาพทั้งหมดในห้องนี้</button>
+    </div>
+
+    <!-- ฟังก์ชันควบคุม Realtime -->
     <div class="card">
       <div class="section-title">⚙️ ตั้งค่าหน้าจอ Overlay (Realtime)</div>
       
@@ -52,20 +59,20 @@
       </div>
 
       <div class="input-group">
-        <label>🫧 ความถี่ในการปล่อยฟองสบู่ (ค่ายิ่งน้อย ยิ่งปล่อยถี่)</label>
+        <label>🫧 ความเร็วการปล่อยฟองสบู่ (น้อย = ถี่มาก)</label>
         <div class="slider-container">
           <input type="range" id="spawn-speed" min="1000" max="6000" step="500" value="2500">
           <div class="val-display" id="speed-display">2500 ms</div>
         </div>
       </div>
 
-      <div class="status-text" id="save-status">✅ อัปเดตข้อมูลไปยังหน้า Overlay แล้ว</div>
+      <div class="status-text" id="save-status">✅ ส่งค่าอัปเดตไปที่จอ Overlay แล้ว</div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
@@ -90,29 +97,31 @@
     const spawnSpeed = document.getElementById('spawn-speed');
     const speedDisplay = document.getElementById('speed-display');
     const saveStatus = document.getElementById('save-status');
+    const btnClearPhotos = document.getElementById('btn-clear-photos');
 
-    let debounceTimer;
+    let isInitialLoad = true;
 
-    // แสดงข้อความสถานะการบันทึก
     function showSavedStatus() {
       saveStatus.classList.add('show');
       setTimeout(() => saveStatus.classList.remove('show'), 1500);
     }
 
-    // ฟังก์ชันส่งค่าไปยัง Firebase 
-    function saveSettingsToDatabase() {
+    // ฟังก์ชันส่งค่าทุกอย่างเข้า Firebase (Realtime)
+    function saveSettings() {
+      if (isInitialLoad) return; // ป้องกันการส่งค่าทับตอนโหลดหน้าครั้งแรก
+      
       update(settingsRef, {
         showQR: toggleQr.checked,
-        welcomeText: welcomeText.value.trim(),
+        welcomeText: welcomeText.value,
         spawnSpeed: Number(spawnSpeed.value)
       }).then(() => {
         showSavedStatus();
       });
     }
 
-    // ดึงค่าปัจจุบันจากฐานข้อมูลมาแสดงในหน้า UI เมื่อโหลดครั้งแรก
+    // ดึงค่าปัจจุบันมาแสดงตอนเปิดหน้า (ทำแค่ครั้งเดียว)
     onValue(settingsRef, (snapshot) => {
-      if (snapshot.exists()) {
+      if (snapshot.exists() && isInitialLoad) {
         const data = snapshot.val();
         if (data.showQR !== undefined) toggleQr.checked = data.showQR;
         if (data.welcomeText) welcomeText.value = data.welcomeText;
@@ -120,21 +129,29 @@
           spawnSpeed.value = data.spawnSpeed;
           speedDisplay.innerText = `${data.spawnSpeed} ms`;
         }
+        isInitialLoad = false;
       }
-    }, { onlyOnce: true }); // ดึงค่าแค่ครั้งเดียวตอนโหลด เพื่อไม่ให้ UI กระตุกตอนพิมพ์
+    }, { onlyOnce: true });
 
-    // ตรวจจับการเปลี่ยนแปลง (Auto-save)
-    toggleQr.addEventListener('change', saveSettingsToDatabase);
+    // ดักจับเหตุการณ์การเปลี่ยนแปลงทั้งหมดเพื่ออัปเดต Realtime
+    toggleQr.addEventListener('change', saveSettings);
     
     spawnSpeed.addEventListener('input', (e) => {
       speedDisplay.innerText = `${e.target.value} ms`;
+      saveSettings(); // อัปเดตทันทีที่ลากสไลเดอร์
     });
-    spawnSpeed.addEventListener('change', saveSettingsToDatabase);
 
-    // ใช้ Debounce กับ Text Input เพื่อไม่ให้ยิงข้อมูลเข้า Firebase ถี่เกินไปตอนกำลังพิมพ์
     welcomeText.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(saveSettingsToDatabase, 500); // ส่งข้อมูลเมื่อหยุดพิมพ์ 0.5 วินาที
+      saveSettings(); // อัปเดตทันทีที่พิมพ์ข้อความแต่ละตัวอักษร
+    });
+
+    // ฟังก์ชันล้างรูปภาพ (ที่ถูกนำกลับมา)
+    btnClearPhotos.addEventListener('click', () => {
+      if(confirm('⚠️ ยืนยันการลบรูปภาพทั้งหมดของห้องนี้ออกจากระบบ?')) {
+        remove(ref(db, `events/${roomId}/donations`))
+          .then(() => alert('✅ ลบรูปภาพทั้งหมดเรียบร้อยแล้ว'))
+          .catch(err => alert('❌ เกิดข้อผิดพลาด: ' + err.message));
+      }
     });
   </script>
 
