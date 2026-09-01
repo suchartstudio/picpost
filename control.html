@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แผงควบคุมระบบสตรีม</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+    
+    html, body { -ms-overflow-style: none; scrollbar-width: none; }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+    body { background: #0f1117; color: #e2e8f0; margin: 0; padding: 20px 15px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 480px; }
+    .section-title { font-size: 13px; font-weight: 600; color: #00f0ff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .field { margin-bottom: 12px; } 
+    label { display: block; font-size: 13px; color: #c9d1d9; margin-bottom: 6px; }
+    .input-row { display: flex; gap: 8px; }
+    input[type="text"], select { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #21262d; background: #161b22; color: #ffffff; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    input[type="text"]:focus, select:focus { border-color: #00f0ff; }
+    .btn-flat { padding: 8px 16px; background: #00f0ff; color: #0d1117; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
+    .btn-flat:hover { opacity: 0.85; }
+    .range-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .val-badge { color: #00f0ff; font-weight: 600; font-size: 13px; }
+    input[type="range"] { width: 100%; height: 5px; border-radius: 3px; background: #21262d; outline: none; accent-color: #00f0ff; cursor: pointer; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .toggle-label { font-size: 14px; color: #c9d1d9; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #21262d; transition: .2s; border-radius: 24px; }
+    .slider-switch:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: #8b949e; transition: .2s; border-radius: 50%; }
+    input:checked + .slider-switch { background-color: #00f0ff; }
+    input:checked + .slider-switch:before { transform: translateX(20px); background-color: #0d1117; }
+    .btn-danger { width: 100%; padding: 10px; background: transparent; color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 5px; transition: all 0.2s; }
+    .btn-danger:hover { background: rgba(248, 81, 73, 0.1); border-color: #f85149; }
+    .divider { height: 1px; background: #21262d; margin: 16px 0; }
+    .link-item { color: #00f0ff; font-size: 12px; display: block; margin-top: 8px; text-decoration: none; padding: 6px; background: rgba(0, 240, 255, 0.1); border-radius: 4px;}
+    .link-item:hover { background: rgba(0, 240, 255, 0.2); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="section-title">00. การจัดการห้อง (Event Room)</div>
+    <div class="field">
+      <div class="input-row">
+        <input type="text" id="room-input" placeholder="ตั้งชื่อห้อง เช่น event_01">
+        <button id="change-room-btn" class="btn-flat">สลับห้อง</button>
+      </div>
+      <div style="margin-top: 15px;">
+        <label>คัดลอกลิงก์เหล่านี้ไปใช้งาน:</label>
+        <a id="link-overlay" href="#" target="_blank" class="link-item">📺 ลิงก์สำหรับใส่ใน OBS</a>
+        <a id="link-donate" href="#" target="_blank" class="link-item">📱 ลิงก์ส่งรูปให้ผู้ชม (หน้าสแกน QR)</a>
+        <a id="link-recheck" href="#" target="_blank" class="link-item" style="color: #f85149; background: rgba(248, 81, 73, 0.1);">🛡️ ลิงก์สำหรับ Recheck (ลบภาพ)</a>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">01. ข้อความต้อนรับ</div>
+    <div class="field">
+      <div class="input-row">
+        <input type="text" id="welcome-text-input" placeholder="เช่น ผู้สนับสนุน, ยินดีต้อนรับ">
+        <button id="save-text-btn" class="btn-flat">บันทึก</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">02. ตำแหน่งและขนาด QR</div>
+    <div class="field">
+      <select id="qr-pos-select">
+        <option value="center">ตรงกลางหน้าจอ (Center)</option>
+        <option value="top-center">กลางบน (Top-Center)</option>
+        <option value="bottom-center">กลางล่าง (Bottom-Center)</option>
+        <option value="top-left">มุมบนซ้าย (Top-Left)</option>
+        <option value="top-right">มุมบนขวา (Top-Right)</option>
+        <option value="bottom-left">มุมล่างซ้าย (Bottom-Left)</option>
+        <option value="bottom-right">มุมล่างขวา (Bottom-Right)</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="range-header">
+        <label style="margin:0;">ขนาด QR Code</label>
+        <span id="size-val" class="val-badge">220px</span>
+      </div>
+      <input type="range" id="qr-size-input" min="100" max="450" step="10" value="220">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">03. วงกลมรูปภาพ (Avatars)</div>
+    <div class="field">
+      <div class="range-header"><label style="margin:0;">สเกลขนาด (Scale)</label><span id="avatar-scale-val" class="val-badge">1.0x</span></div>
+      <input type="range" id="avatar-scale-input" min="0.5" max="3.0" step="0.1" value="1.0">
+    </div>
+    <div class="field">
+      <div class="range-header"><label style="margin:0;">ความเร็ว (Speed)</label><span id="avatar-speed-val" class="val-badge">1.0x</span></div>
+      <input type="range" id="avatar-speed-input" min="0.5" max="4.0" step="0.1" value="1.0">
+    </div>
+    <div class="field">
+      <div class="range-header"><label style="margin:0;">ระยะการกระจายของรูปภาพ (Spread)</label><span id="avatar-spread-val" class="val-badge">100%</span></div>
+      <input type="range" id="avatar-spread-input" min="10" max="100" step="5" value="100">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">04. เปิด/ปิด การแสดงผล</div>
+    <div class="toggle-row">
+      <span class="toggle-label">QR Code</span>
+      <label class="switch"><input type="checkbox" id="toggle-qr" checked><span class="slider-switch"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">วงกลมรูปภาพลอย</span>
+      <label class="switch"><input type="checkbox" id="toggle-avatars" checked><span class="slider-switch"></span></label>
+    </div>
+
+    <div class="divider"></div>
+    <button id="reset-btn" class="btn-danger">⚠️ ล้างรูปภาพทั้งหมดในห้องนี้</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+      authDomain: "suchartstudio-9a78d.firebaseapp.com",
+      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suchartstudio-9a78d",
+      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+      messagingSenderId: "953369646185",
+      appId: "1:953369646185:web:018e66f489aad5356ebef8",
+      measurementId: "G-J7M38HNDYD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default';
+    
+    document.getElementById('room-input').value = roomId;
+    const originUrl = "https://suchartstudio.github.io/picpost";
+    document.getElementById('link-overlay').href = `${originUrl}/overlay.html?room=${roomId}`;
+    document.getElementById('link-donate').href = `${originUrl}/donate.html?room=${roomId}`;
+    document.getElementById('link-recheck').href = `${originUrl}/recheck.html?room=${roomId}`;
+
+    document.getElementById('change-room-btn').addEventListener('click', () => {
+      const newRoom = document.getElementById('room-input').value.trim() || 'default';
+      window.location.search = `?room=${newRoom}`;
+    });
+
+    const settingsRef = ref(db, `events/${roomId}/settings`);
+
+    onValue(settingsRef, (snap) => {
+      const data = snap.val() || {};
+      if (data.welcomeText) document.getElementById('welcome-text-input').value = data.welcomeText;
+      if (data.qrPosition) document.getElementById('qr-pos-select').value = data.qrPosition;
+      if (data.qrSize) { document.getElementById('qr-size-input').value = data.qrSize; document.getElementById('size-val').innerText = `${data.qrSize}px`; }
+      document.getElementById('toggle-qr').checked = data.showQR !== false;
+      document.getElementById('toggle-avatars').checked = data.showAvatars !== false;
+      if (data.avatarScale !== undefined) { document.getElementById('avatar-scale-input').value = data.avatarScale; document.getElementById('avatar-scale-val').innerText = `${data.avatarScale}x`; }
+      if (data.avatarSpeed !== undefined) { document.getElementById('avatar-speed-input').value = data.avatarSpeed; document.getElementById('avatar-speed-val').innerText = `${data.avatarSpeed}x`; }
+      if (data.avatarSpread !== undefined) { document.getElementById('avatar-spread-input').value = data.avatarSpread; document.getElementById('avatar-spread-val').innerText = `${data.avatarSpread}%`; }
+    });
+
+    document.getElementById('save-text-btn').addEventListener('click', () => { update(settingsRef, { welcomeText: document.getElementById('welcome-text-input').value }); });
+    document.getElementById('qr-pos-select').addEventListener('change', (e) => update(settingsRef, { qrPosition: e.target.value }));
+    
+    document.getElementById('qr-size-input').addEventListener('input', (e) => {
+      const size = Number(e.target.value); document.getElementById('size-val').innerText = `${size}px`; update(settingsRef, { qrSize: size });
+    });
+    document.getElementById('avatar-scale-input').addEventListener('input', (e) => {
+      const scale = Number(e.target.value); document.getElementById('avatar-scale-val').innerText = `${scale}x`; update(settingsRef, { avatarScale: scale });
+    });
+    document.getElementById('avatar-speed-input').addEventListener('input', (e) => {
+      const speed = Number(e.target.value); document.getElementById('avatar-speed-val').innerText = `${speed}x`; update(settingsRef, { avatarSpeed: speed });
+    });
+    document.getElementById('avatar-spread-input').addEventListener('input', (e) => {
+      const spread = Number(e.target.value); document.getElementById('avatar-spread-val').innerText = `${spread}%`; update(settingsRef, { avatarSpread: spread });
+    });
+
+    const updateToggles = () => { update(settingsRef, { showQR: document.getElementById('toggle-qr').checked, showAvatars: document.getElementById('toggle-avatars').checked }); };
+    document.getElementById('toggle-qr').addEventListener('change', updateToggles);
+    document.getElementById('toggle-avatars').addEventListener('change', updateToggles);
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if (confirm(`คุณต้องการลบรูปภาพทั้งหมดในห้อง "${roomId}" ใช่หรือไม่?`)) {
+        remove(ref(db, `events/${roomId}/donations`));
+      }
+    });
+  </script>
+</body>
+</html>
