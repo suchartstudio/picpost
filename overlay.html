@@ -2,110 +2,196 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OBS Bubble Overlay</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-    body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     
+    body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
     #bubble-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-    .highlight-center {
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%) scale(0);
-        animation: popIn 0.6s forwards; z-index: 1000;
+    /* กล่องห่อหุ้มฟองสบู่และชื่อ เพื่อให้ลอยขึ้นไปพร้อมกัน */
+    .bubble-wrapper {
+      position: absolute;
+      bottom: -350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      animation: floatUp 9s linear forwards;
     }
-    
-    @keyframes popIn {
-        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+
+    /* ฟองสบู่วงกลม */
+    .bubble {
+      border-radius: 50%;
+      border: 4px solid #00f0ff;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.5);
+      overflow: hidden;
+      background: #0d1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .bubble-wrapper { position: absolute; bottom: -200px; animation: floatUp linear forwards; z-index: 1; }
-    .bubble-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: sway 3.5s ease-in-out infinite; }
+    .bubble img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
-    .bubble { border-radius: 50%; border: 5px solid #00f0ff; box-shadow: 0 4px 15px rgba(0,0,0,0.5); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .bubble img { width: 100%; height: 100%; object-fit: cover; }
-    .bubble-name { color: #fff; font-weight: bold; font-size: 24px; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); background: rgba(0,0,0,0.5); padding: 4px 15px; border-radius: 20px; }
+    /* ป้ายชื่อด้านล่าง */
+    .bubble-name {
+      color: #ffffff;
+      font-weight: 400;
+      font-size: 16px;
+      background: rgba(22, 27, 34, 0.85);
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+      white-space: nowrap;
+    }
 
-    @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-120vh); opacity: 0; } }
-    @keyframes floatFromCenter { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-70vh); opacity: 0; } }
-    @keyframes sway { 0%, 100% { transform: translateX(-20px); } 50% { transform: translateX(20px); } }
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-120vh) scale(1.1) rotate(15deg); opacity: 0; }
+    }
+
+    .qr-box {
+      position: fixed; bottom: 25px; right: 25px; background: rgba(22, 27, 34, 0.85);
+      border: 2px solid #00f0ff; border-radius: 16px; padding: 12px;
+      display: flex; flex-direction: column; align-items: center;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); backdrop-filter: blur(5px); z-index: 10;
+    }
+    .qr-box img { width: 320px; height: 320px; border-radius: 8px; background: white; padding: 5px; }
+    .qr-box span { color: #00f0ff; font-size: 13px; font-weight: 600; margin-top: 8px; text-shadow: 0 0 5px rgba(0, 0, 0, 0.8); }
   </style>
 </head>
 <body>
+
   <div id="bubble-container"></div>
+  <div class="qr-box" id="qr-box">
+    <img id="qr-image" src="" alt="Scan QR Code">
+    <span id="qr-text">📱 สแกนส่งรูปขึ้นจอ</span>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onChildAdded, onChildRemoved, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk", databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "suchartstudio-9a78d" };
-    const db = getDatabase(initializeApp(firebaseConfig));
-    const roomId = new URLSearchParams(window.location.search).get('room') || 'default';
-    const container = document.getElementById('bubble-container');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+      authDomain: "suchartstudio-9a78d.firebaseapp.com",
+      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suchartstudio-9a78d",
+      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+      messagingSenderId: "953369646185",
+      appId: "1:953369646185:web:018e66f489aad5356ebef8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default';
     
-    let imageList = [], currentIndex = 0, loopTimer = null, spawnSpeed = 2500, displayMode = 'full';
+    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
 
-    onValue(ref(db, `events/${roomId}/settings`), (snapshot) => {
-      if (snapshot.exists()) displayMode = snapshot.val().displayMode || 'full';
+    const container = document.getElementById('bubble-container');
+    const imageList = []; // ตอนนี้เก็บเป็น Object { imgUrl, name } แทน
+    
+    let currentIndex = 0;
+    let loopTimer = null;
+    let spawnSpeed = 2500;
+    let bubbleScale = 1;
+    let spreadArea = 80;
+    let lastLeftPos = -100; 
+
+    const settingsRef = ref(db, `events/${roomId}/settings`);
+    onValue(settingsRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const settings = snapshot.val();
+
+      document.getElementById('qr-box').style.display = settings.showQR === false ? 'none' : 'flex';
+      if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
+      if (settings.bubbleSize) bubbleScale = settings.bubbleSize / 100;
+      if (settings.bubbleSpread) spreadArea = settings.bubbleSpread;
+      
+      if (settings.spawnSpeed && settings.spawnSpeed !== spawnSpeed) {
+        spawnSpeed = Number(settings.spawnSpeed);
+        resetLoopTimer();
+      }
     });
 
-    function getPositionX() {
-        if (displayMode === 'split') {
-            const isLeft = Math.random() > 0.5;
-            return isLeft ? Math.floor(Math.random() * 20) + 5 : Math.floor(Math.random() * 20) + 75; 
-        }
-        return Math.floor(Math.random() * 80) + 10;
-    }
-
-    function createBubble(itemData, isNew = false) {
+    function createBubble(itemData) {
       const wrapper = document.createElement('div');
-      wrapper.setAttribute('data-key', itemData.key);
-      wrapper.innerHTML = `<div class="bubble-inner"><div class="bubble" style="width:150px;height:150px;"><img src="${itemData.imgUrl}"></div>${itemData.name ? `<div class="bubble-name">${itemData.name}</div>` : ''}</div>`;
-      container.appendChild(wrapper);
+      wrapper.className = 'bubble-wrapper';
 
-      const duration = Math.floor(Math.random() * 4) + 8;
-      const posX = getPositionX();
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      
+      const baseSize = Math.floor(Math.random() * 80) + 120;
+      const finalSize = baseSize * bubbleScale;
+      bubble.style.width = `${finalSize}px`;
+      bubble.style.height = `${finalSize}px`;
 
-      if(isNew) {
-          wrapper.className = 'highlight-center';
-          setTimeout(() => {
-              if(!document.body.contains(wrapper)) return;
-              wrapper.className = 'bubble-wrapper';
-              wrapper.style.left = `${posX}%`;
-              wrapper.style.bottom = '50%'; 
-              wrapper.style.animationName = 'floatFromCenter';
-              wrapper.style.animationDuration = `${duration}s`;
-              setTimeout(() => wrapper.remove(), duration * 1000);
-          }, 3000);
-      } else {
-          wrapper.className = 'bubble-wrapper';
-          wrapper.style.left = `${posX}%`;
-          wrapper.style.animationDuration = `${duration}s`;
-          setTimeout(() => wrapper.remove(), duration * 1000);
+      const img = document.createElement('img');
+      img.src = itemData.imgUrl;
+      bubble.appendChild(img);
+      wrapper.appendChild(bubble);
+
+      // สร้างป้ายชื่อถ้ามีข้อมูลชื่อส่งมาด้วย
+      if (itemData.name) {
+        const nameTag = document.createElement('div');
+        nameTag.className = 'bubble-name';
+        nameTag.innerText = itemData.name;
+        // ปรับฟอนต์ให้ใหญ่ขึ้น/เล็กลงตามสเกลที่ตั้งค่า
+        nameTag.style.fontSize = `${Math.max(12, 16 * bubbleScale)}px`;
+        wrapper.appendChild(nameTag);
       }
+
+      let leftPos;
+      let attempts = 0;
+      const margin = (100 - spreadArea) / 2; 
+
+      do {
+        leftPos = margin + Math.floor(Math.random() * spreadArea);
+        attempts++;
+      } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
+      
+      lastLeftPos = leftPos;
+      wrapper.style.left = `${leftPos}%`;
+
+      const duration = Math.floor(Math.random() * 4) + 7;
+      wrapper.style.animationDuration = `${duration}s`;
+
+      container.appendChild(wrapper);
+      setTimeout(() => wrapper.remove(), duration * 1000);
     }
 
     onChildAdded(ref(db, `events/${roomId}/donations`), (snapshot) => {
       const data = snapshot.val();
       const imgUrl = data?.imageUrl || data?.url;
-      if (imgUrl && !imageList.some(item => item.key === snapshot.key)) {
-        const newItem = { key: snapshot.key, imgUrl, name: data?.name || '' };
+      // รองรับ key ชื่อผู้ส่งหลายรูปแบบ (name, senderName, displayName) ขึ้นอยู่กับฟอร์มหน้าส่งรูป
+      const name = data?.name || data?.senderName || data?.displayName || '';
+
+      if (imgUrl && !imageList.some(item => item.imgUrl === imgUrl)) {
+        const newItem = { imgUrl, name };
         imageList.push(newItem);
-        createBubble(newItem, true); 
+        createBubble(newItem);
       }
     });
 
-    onChildRemoved(ref(db, `events/${roomId}/donations`), (snapshot) => {
-        imageList = imageList.filter(item => item.key !== snapshot.key);
-        document.querySelectorAll(`[data-key="${snapshot.key}"]`).forEach(el => el.remove());
-    });
-
-    setInterval(() => {
+    function resetLoopTimer() {
+      if (loopTimer) clearInterval(loopTimer);
+      loopTimer = setInterval(() => {
         if (imageList.length > 0) {
-          createBubble(imageList[currentIndex], false);
+          createBubble(imageList[currentIndex]);
           currentIndex = (currentIndex + 1) % imageList.length;
         }
-    }, spawnSpeed);
+      }, spawnSpeed);
+    }
+    resetLoopTimer();
   </script>
+
 </body>
 </html>
