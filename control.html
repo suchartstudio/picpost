@@ -39,6 +39,24 @@
   </style>
 </head>
 <body>
+
+  <!-- Login Overlay (รหัส 987654321) -->
+  <div id="login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f1117;z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;">
+    <h2 style="color:#00f0ff;margin-bottom:20px;">🔒 เข้าสู่หน้า Control</h2>
+    <input type="password" id="pass-input" placeholder="ใส่รหัสผ่าน" style="padding:10px;border-radius:6px;border:1px solid #21262d;background:#161b22;color:#fff;margin-bottom:15px;text-align:center;font-size:18px;outline:none;">
+    <button id="login-btn" style="padding:10px 30px;background:#7928ca;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-weight:600;">เข้าสู่ระบบ</button>
+    <p id="error-msg" style="color:#f85149;margin-top:15px;display:none;">❌ รหัสผ่านไม่ถูกต้อง</p>
+  </div>
+  <script>
+    document.getElementById('login-btn').addEventListener('click', () => {
+      if(document.getElementById('pass-input').value === '987654321') {
+        document.getElementById('login-overlay').style.display = 'none';
+      } else {
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    });
+  </script>
+
   <div class="container">
     <div class="section-title">00. การจัดการห้อง (Event Room)</div>
     <div class="field">
@@ -89,6 +107,13 @@
     <div class="divider"></div>
 
     <div class="section-title">03. วงกลมรูปภาพ (Avatars)</div>
+    <div class="field">
+      <label style="margin-bottom: 8px;">โหมดการแสดงผล</label>
+      <select id="bubble-mode-select">
+        <option value="full">โหมดกระจายแสดงแบบเต็มจอ</option>
+        <option value="sides">โหมดแสดงชิดขอบ ซ้าย/ขวา (เว้นพื้นที่ตรงกลาง)</option>
+      </select>
+    </div>
     <div class="field">
       <div class="range-header"><label style="margin:0;">สเกลขนาด (Scale)</label><span id="avatar-scale-val" class="val-badge">1.0x</span></div>
       <input type="range" id="avatar-scale-input" min="0.5" max="3.0" step="0.1" value="1.0">
@@ -162,10 +187,12 @@
       if (data.avatarScale !== undefined) { document.getElementById('avatar-scale-input').value = data.avatarScale; document.getElementById('avatar-scale-val').innerText = `${data.avatarScale}x`; }
       if (data.avatarSpeed !== undefined) { document.getElementById('avatar-speed-input').value = data.avatarSpeed; document.getElementById('avatar-speed-val').innerText = `${data.avatarSpeed}x`; }
       if (data.avatarSpread !== undefined) { document.getElementById('avatar-spread-input').value = data.avatarSpread; document.getElementById('avatar-spread-val').innerText = `${data.avatarSpread}%`; }
+      if (data.bubbleMode) document.getElementById('bubble-mode-select').value = data.bubbleMode;
     });
 
     document.getElementById('save-text-btn').addEventListener('click', () => { update(settingsRef, { welcomeText: document.getElementById('welcome-text-input').value }); });
     document.getElementById('qr-pos-select').addEventListener('change', (e) => update(settingsRef, { qrPosition: e.target.value }));
+    document.getElementById('bubble-mode-select').addEventListener('change', (e) => update(settingsRef, { bubbleMode: e.target.value }));
     
     document.getElementById('qr-size-input').addEventListener('input', (e) => {
       const size = Number(e.target.value); document.getElementById('size-val').innerText = `${size}px`; update(settingsRef, { qrSize: size });
