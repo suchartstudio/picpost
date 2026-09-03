@@ -2,196 +2,235 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OBS Bubble Overlay</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     
+    :root {
+        --qr-size: 150px;
+        --qr-text-size: 16px;
+        --name-size: 24px;
+    }
+
+    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+    
     #bubble-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-    /* กล่องห่อหุ้มฟองสบู่และชื่อ เพื่อให้ลอยขึ้นไปพร้อมกัน */
+    /* เด้งขยายกลางจอก่อน 3 วินาทีแรก */
+    .highlight-center {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        z-index: 1000;
+    }
+    
+    @keyframes popIn {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+    }
+
+    /* กล่องห่อหุ้มสำหรับการลอย */
     .bubble-wrapper {
-      position: absolute;
-      bottom: -350px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      animation: floatUp 9s linear forwards;
+        position: absolute;
+        bottom: -200px;
+        animation: floatUp linear forwards;
+        z-index: 1;
     }
 
-    /* ฟองสบู่วงกลม */
+    /* ด้านในสำหรับการส่ายซ้ายขวา */
+    .bubble-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        animation: sway 3.5s ease-in-out infinite;
+    }
+
     .bubble {
-      border-radius: 50%;
-      border: 4px solid #00f0ff;
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.5);
-      overflow: hidden;
-      background: #0d1117;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+        border-radius: 50%;
+        border: 5px solid #00f0ff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        overflow: hidden;
+        background: #0d1117;
+        display: flex; align-items: center; justify-content: center;
     }
-
     .bubble img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
-    /* ป้ายชื่อด้านล่าง */
+    /* ขนาดชื่อดึงจาก CSS Variable */
     .bubble-name {
-      color: #ffffff;
-      font-weight: 400;
-      font-size: 16px;
-      background: rgba(22, 27, 34, 0.85);
-      padding: 4px 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(0, 240, 255, 0.5);
-      text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-      white-space: nowrap;
+        color: #ffffff;
+        font-weight: bold;
+        font-size: var(--name-size);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+        text-align: center;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 15px;
+        border-radius: 20px;
     }
 
     @keyframes floatUp {
-      0% { transform: translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-120vh) scale(1.1) rotate(15deg); opacity: 0; }
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-120vh); opacity: 0; }
     }
 
-    .qr-box {
-      position: fixed; bottom: 25px; right: 25px; background: rgba(22, 27, 34, 0.85);
-      border: 2px solid #00f0ff; border-radius: 16px; padding: 12px;
-      display: flex; flex-direction: column; align-items: center;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); backdrop-filter: blur(5px); z-index: 10;
+    @keyframes sway {
+        0%, 100% { transform: translateX(-20px); }
+        50% { transform: translateX(20px); }
     }
-    .qr-box img { width: 320px; height: 320px; border-radius: 8px; background: white; padding: 5px; }
-    .qr-box span { color: #00f0ff; font-size: 13px; font-weight: 600; margin-top: 8px; text-shadow: 0 0 5px rgba(0, 0, 0, 0.8); }
+
+    /* กล่อง QR ดึงขนาดจาก CSS Variable */
+    .qr-box {
+        position: fixed; bottom: 25px; right: 25px; background: rgba(22, 27, 34, 0.9);
+        border: 2px solid #00f0ff; border-radius: 16px; padding: 15px;
+        display: flex; flex-direction: column; align-items: center;
+        box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); z-index: 10;
+    }
+    .qr-box img { width: var(--qr-size); height: var(--qr-size); border-radius: 8px; background: white; padding: 5px; transition: 0.3s; }
+    .qr-box span { color: #00f0ff; font-size: var(--qr-text-size); font-weight: 600; margin-top: 10px; transition: 0.3s; }
   </style>
 </head>
 <body>
-
   <div id="bubble-container"></div>
   <div class="qr-box" id="qr-box">
-    <img id="qr-image" src="" alt="Scan QR Code">
+    <img id="qr-image" src="" alt="Scan">
     <span id="qr-text">📱 สแกนส่งรูปขึ้นจอ</span>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onChildAdded, onChildRemoved, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
-      authDomain: "suchartstudio-9a78d.firebaseapp.com",
-      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "suchartstudio-9a78d",
-      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
-      messagingSenderId: "953369646185",
-      appId: "1:953369646185:web:018e66f489aad5356ebef8"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk", authDomain: "suchartstudio-9a78d.firebaseapp.com", databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "suchartstudio-9a78d" };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
     
-    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
+    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
 
     const container = document.getElementById('bubble-container');
-    const imageList = []; // ตอนนี้เก็บเป็น Object { imgUrl, name } แทน
-    
+    let imageList = [];
     let currentIndex = 0;
     let loopTimer = null;
     let spawnSpeed = 2500;
     let bubbleScale = 1;
     let spreadArea = 80;
-    let lastLeftPos = -100; 
 
-    const settingsRef = ref(db, `events/${roomId}/settings`);
-    onValue(settingsRef, (snapshot) => {
+    // รับค่า Settings แบบ Realtime
+    onValue(ref(db, `events/${roomId}/settings`), (snapshot) => {
       if (!snapshot.exists()) return;
-      const settings = snapshot.val();
+      const s = snapshot.val();
 
-      document.getElementById('qr-box').style.display = settings.showQR === false ? 'none' : 'flex';
-      if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
-      if (settings.bubbleSize) bubbleScale = settings.bubbleSize / 100;
-      if (settings.bubbleSpread) spreadArea = settings.bubbleSpread;
+      document.getElementById('qr-box').style.display = s.showQR === false ? 'none' : 'flex';
+      if (s.welcomeText) document.getElementById('qr-text').innerText = s.welcomeText;
       
-      if (settings.spawnSpeed && settings.spawnSpeed !== spawnSpeed) {
-        spawnSpeed = Number(settings.spawnSpeed);
+      // ปรับขนาดตามที่ตั้งค่า
+      if (s.qrSize) document.documentElement.style.setProperty('--qr-size', `${s.qrSize}px`);
+      if (s.qrTextSize) document.documentElement.style.setProperty('--qr-text-size', `${s.qrTextSize}px`);
+      if (s.nameSize) document.documentElement.style.setProperty('--name-size', `${s.nameSize}px`);
+      
+      if (s.bubbleSize) bubbleScale = s.bubbleSize / 100;
+      if (s.bubbleSpread) spreadArea = s.bubbleSpread;
+      
+      if (s.spawnSpeed && s.spawnSpeed !== spawnSpeed) {
+        spawnSpeed = Number(s.spawnSpeed);
         resetLoopTimer();
       }
     });
 
-    function createBubble(itemData) {
+    function getRandomColor() {
+        const hue = Math.floor(Math.random() * 360);
+        return `hsl(${hue}, 80%, 65%)`;
+    }
+
+    function createBubble(itemData, isNew = false) {
       const wrapper = document.createElement('div');
-      wrapper.className = 'bubble-wrapper';
+      // กำหนด data-key ไว้เพื่อใช้อ้างอิงตอนลบ
+      wrapper.setAttribute('data-key', itemData.key);
+      
+      const inner = document.createElement('div');
+      inner.className = 'bubble-inner';
 
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      
-      const baseSize = Math.floor(Math.random() * 80) + 120;
-      const finalSize = baseSize * bubbleScale;
-      bubble.style.width = `${finalSize}px`;
-      bubble.style.height = `${finalSize}px`;
+      const baseSize = 150 * bubbleScale;
+      bubble.style.width = `${baseSize}px`;
+      bubble.style.height = `${baseSize}px`;
+      bubble.style.borderColor = getRandomColor(); // สุ่มสีขอบ
 
       const img = document.createElement('img');
       img.src = itemData.imgUrl;
       bubble.appendChild(img);
-      wrapper.appendChild(bubble);
+      inner.appendChild(bubble);
 
-      // สร้างป้ายชื่อถ้ามีข้อมูลชื่อส่งมาด้วย
       if (itemData.name) {
         const nameTag = document.createElement('div');
         nameTag.className = 'bubble-name';
         nameTag.innerText = itemData.name;
-        // ปรับฟอนต์ให้ใหญ่ขึ้น/เล็กลงตามสเกลที่ตั้งค่า
-        nameTag.style.fontSize = `${Math.max(12, 16 * bubbleScale)}px`;
-        wrapper.appendChild(nameTag);
+        inner.appendChild(nameTag);
       }
-
-      let leftPos;
-      let attempts = 0;
-      const margin = (100 - spreadArea) / 2; 
-
-      do {
-        leftPos = margin + Math.floor(Math.random() * spreadArea);
-        attempts++;
-      } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
       
-      lastLeftPos = leftPos;
-      wrapper.style.left = `${leftPos}%`;
-
-      const duration = Math.floor(Math.random() * 4) + 7;
-      wrapper.style.animationDuration = `${duration}s`;
-
+      wrapper.appendChild(inner);
       container.appendChild(wrapper);
-      setTimeout(() => wrapper.remove(), duration * 1000);
+
+      const duration = Math.floor(Math.random() * 4) + 8;
+      
+      if(isNew) {
+          // ถ้าเพิ่งส่งมาใหม่ ให้เด้งกลางจอก่อน 3 วิ
+          wrapper.className = 'highlight-center';
+          setTimeout(() => {
+              if(!document.body.contains(wrapper)) return; // ถ้าโดนลบไปแล้วไม่ต้องทำต่อ
+              wrapper.className = 'bubble-wrapper';
+              wrapper.style.left = `${Math.floor(Math.random() * spreadArea) + (100-spreadArea)/2}%`;
+              wrapper.style.animationDuration = `${duration}s`;
+              setTimeout(() => wrapper.remove(), duration * 1000);
+          }, 3000);
+      } else {
+          // ถ้าเป็น Loop ปกติ ให้ลอยขึ้นเลย
+          wrapper.className = 'bubble-wrapper';
+          wrapper.style.left = `${Math.floor(Math.random() * spreadArea) + (100-spreadArea)/2}%`;
+          wrapper.style.animationDuration = `${duration}s`;
+          setTimeout(() => wrapper.remove(), duration * 1000);
+      }
     }
 
+    // มีคนส่งรูปใหม่
     onChildAdded(ref(db, `events/${roomId}/donations`), (snapshot) => {
+      const key = snapshot.key;
       const data = snapshot.val();
       const imgUrl = data?.imageUrl || data?.url;
-      // รองรับ key ชื่อผู้ส่งหลายรูปแบบ (name, senderName, displayName) ขึ้นอยู่กับฟอร์มหน้าส่งรูป
       const name = data?.name || data?.senderName || data?.displayName || '';
 
-      if (imgUrl && !imageList.some(item => item.imgUrl === imgUrl)) {
-        const newItem = { imgUrl, name };
+      if (imgUrl && !imageList.some(item => item.key === key)) {
+        const newItem = { key, imgUrl, name };
         imageList.push(newItem);
-        createBubble(newItem);
+        // กำหนด isNew = true เพื่อให้เด้งกลางจอ
+        createBubble(newItem, true); 
       }
+    });
+
+    // ทริกเกอร์ลบรูปแบบ Realtime (ทำให้รูปหายไปจากหน้าจอทันที)
+    onChildRemoved(ref(db, `events/${roomId}/donations`), (snapshot) => {
+        const key = snapshot.key;
+        // 1. เอาออกจากคิว Loop
+        imageList = imageList.filter(item => item.key !== key);
+        // 2. ลบ element ที่กำลังแสดงผลอยู่บนหน้าจอทันที
+        document.querySelectorAll(`[data-key="${key}"]`).forEach(el => el.remove());
     });
 
     function resetLoopTimer() {
       if (loopTimer) clearInterval(loopTimer);
       loopTimer = setInterval(() => {
         if (imageList.length > 0) {
-          createBubble(imageList[currentIndex]);
+          // สุ่มแสดงออกแบบ Loop (ตั้ง isNew = false เพื่อให้ลอยขึ้นปกติ)
+          createBubble(imageList[currentIndex], false);
           currentIndex = (currentIndex + 1) % imageList.length;
         }
       }, spawnSpeed);
     }
     resetLoopTimer();
   </script>
-
 </body>
 </html>
