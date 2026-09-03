@@ -2,187 +2,98 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recheck System</title>
+  <title>จัดการรูปภาพ (Recheck)</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-    * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap');
+    body { font-family: 'Kanit', sans-serif; background: #161b22; color: white; padding: 20px; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #30363d; padding-bottom: 10px;}
+    .btn-danger { background: #f85149; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;}
+    .btn-secondary { background: #30363d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;}
     
-    :root {
-      --card-size: 150px;
-    }
-
-    body { 
-      background: #0f1117; 
-      color: #e2e8f0; 
-      margin: 0; 
-      padding: 15px; 
-    }
-
-    /* แถบควบคุมขนาดภาพแบบไม่มีหัวข้อ */
-    .top-bar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(22, 27, 34, 0.95);
-      backdrop-filter: blur(8px);
-      border: 1px solid #30363d;
-      padding: 10px 20px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
-
-    .slider-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      max-width: 350px;
-    }
-
-    .slider-container label {
-      font-size: 14px;
-      color: #00f0ff;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    input[type=range] {
-      width: 100%;
-      accent-color: #00f0ff;
-      cursor: pointer;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(var(--card-size), 1fr));
-      gap: 12px;
-    }
-
-    .img-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: border-color 0.2s;
-    }
-
-    .img-card:hover {
-      border-color: #f85149;
-    }
-
-    .img-card img {
-      width: 100%;
-      height: var(--card-size);
-      object-fit: cover;
-      display: block;
-    }
-
-    .btn-delete {
-      width: 100%;
-      padding: 6px;
-      background: #f85149;
-      color: white;
-      border: none;
-      font-weight: 600;
-      font-size: 12px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .btn-delete:hover {
-      background: #d73a33;
-    }
-
-    .empty-msg {
-      grid-column: 1 / -1;
-      text-align: center;
-      color: #8b949e;
-      padding: 50px;
-    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+    .card { background: #0d1117; padding: 10px; border-radius: 8px; border: 1px solid #30363d; position: relative; }
+    .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 6px; }
+    .card .info { margin-top: 10px; font-size: 14px; text-align: center; }
+    
+    .checkbox-container { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px; }
+    .checkbox-container input { width: 20px; height: 20px; cursor: pointer; }
   </style>
 </head>
 <body>
-
-  <div class="top-bar">
-    <div class="slider-container">
-      <label>🔍 ปรับขนาดภาพ:</label>
-      <input type="range" id="size-slider" min="80" max="350" value="150">
+  <div class="header-bar">
+    <h2>📸 ตรวจสอบและลบรูปภาพ</h2>
+    <div>
+      <button class="btn-secondary" onclick="toggleSelectAll()">เลือกทั้งหมด</button>
+      <button class="btn-danger" id="delete-btn">🗑️ ลบไฟล์ที่เลือก (<span id="sel-count">0</span>)</button>
     </div>
   </div>
 
-  <div class="grid" id="gallery-grid">
-    <div class="empty-msg">⏳ กำลังโหลดรูปภาพ...</div>
-  </div>
+  <div class="grid" id="image-grid"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
-      authDomain: "suchartstudio-9a78d.firebaseapp.com",
-      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "suchartstudio-9a78d",
-      storageBucket: "suchartstudio-9a78d.firebasestorage.app",
-      messagingSenderId: "953369646185",
-      appId: "1:953369646185:web:018e66f489aad5356ebef8",
-      measurementId: "G-J7M38HNDYD"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk", authDomain: "suchartstudio-9a78d.firebaseapp.com", databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "suchartstudio-9a78d" };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
-
-    const galleryGrid = document.getElementById('gallery-grid');
-    const sizeSlider = document.getElementById('size-slider');
-
-    // ปรับขนาดการแสดงผลรูปภาพผ่าน CSS Variable เมื่อมีการเลื่อนสไลเดอร์
-    sizeSlider.addEventListener('input', (e) => {
-      document.documentElement.style.setProperty('--card-size', `${e.target.value}px`);
-    });
-
-    // ดึงรูปภาพทั้งหมดมาแสดงผล Realtime
     const donationsRef = ref(db, `events/${roomId}/donations`);
+
+    const grid = document.getElementById('image-grid');
+    let photosData = [];
+    let isAllSelected = false;
+
+    // โหลดข้อมูลแบบ Realtime
     onValue(donationsRef, (snapshot) => {
-      galleryGrid.innerHTML = '';
-
-      if (!snapshot.exists()) {
-        galleryGrid.innerHTML = '<div class="empty-msg">ไม่มีรูปภาพในระบบ</div>';
-        return;
-      }
-
-      snapshot.forEach((childSnap) => {
-        const photoId = childSnap.key;
-        const data = childSnap.val();
-        const imgUrl = data.imageUrl || data.url;
-
-        if (imgUrl) {
-          const card = document.createElement('div');
-          card.className = 'img-card';
-          card.innerHTML = `
-            <img src="${imgUrl}" alt="Photo">
-            <button class="btn-delete" onclick="deletePhoto('${photoId}')">🗑️ ลบรูปนี้</button>
-          `;
-          galleryGrid.appendChild(card);
+        grid.innerHTML = '';
+        photosData = [];
+        if(snapshot.exists()) {
+            snapshot.forEach(child => {
+                const data = child.val();
+                const key = child.key;
+                const imgUrl = data.imageUrl || data.url;
+                const name = data.name || data.senderName || data.displayName || 'ไม่มีชื่อ';
+                
+                photosData.push({key, imgUrl, name});
+                
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="checkbox-container"><input type="checkbox" class="img-checkbox" value="${key}" onchange="updateCount()"></div>
+                    <img src="${imgUrl}" alt="Photo">
+                    <div class="info">${name}</div>
+                `;
+                grid.appendChild(card);
+            });
+        } else {
+            grid.innerHTML = '<p>ไม่มีรูปภาพในระบบ</p>';
         }
-      });
+        updateCount();
     });
 
-    // ฟังก์ชันสั่งลบรูปภาพจากระบบ
-    window.deletePhoto = (photoId) => {
-      if (confirm('คุณต้องการลบรูปนี้ใช่หรือไม่?')) {
-        remove(ref(db, `events/${roomId}/donations/${photoId}`));
-      }
+    window.toggleSelectAll = function() {
+        isAllSelected = !isAllSelected;
+        document.querySelectorAll('.img-checkbox').forEach(cb => cb.checked = isAllSelected);
+        updateCount();
     };
-  </script>
 
+    window.updateCount = function() {
+        const count = document.querySelectorAll('.img-checkbox:checked').length;
+        document.getElementById('sel-count').innerText = count;
+    };
+
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+        const selected = Array.from(document.querySelectorAll('.img-checkbox:checked')).map(cb => cb.value);
+        if(selected.length === 0) return alert('กรุณาเลือกรูปที่ต้องการลบ');
+        
+        if(confirm(`ยืนยันการลบ ${selected.length} รูป? (ไฟล์จะหายไปจากหน้าจอ Overlay ทันที)`)) {
+            for(let key of selected) {
+                await remove(ref(db, `events/${roomId}/donations/${key}`));
+            }
+        }
+    });
+  </script>
 </body>
 </html>
