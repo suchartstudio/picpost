@@ -2,45 +2,121 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control Panel</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
     * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     body { background: #0f1117; color: #e2e8f0; padding: 20px; display: flex; justify-content: center; margin: 0; }
-    .container { width: 100%; max-width: 600px; display: none; }
+    .container { width: 100%; max-width: 600px; display: none; } /* ซ่อนไว้ก่อนจนกว่าจะใส่ PIN ถูก */
     
-    #lock-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 17, 23, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-    #lock-screen input { padding: 15px; font-size: 20px; text-align: center; border-radius: 8px; border: 2px solid #30363d; background: #0d1117; color: #fff; margin-bottom: 15px; width: 250px;}
+    /* หน้าจอ Lock Screen */
+    #lock-screen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(15, 17, 23, 0.95); display: flex; flex-direction: column;
+        align-items: center; justify-content: center; z-index: 1000;
+    }
+    #lock-screen input { padding: 15px; font-size: 20px; text-align: center; border-radius: 8px; border: 2px solid #30363d; background: #0d1117; color: #fff; margin-bottom: 15px; letter-spacing: 5px; width: 250px;}
     #lock-screen button { padding: 12px 30px; font-size: 16px; background: #00f0ff; color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
     
     .card { background: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 20px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #00f0ff; margin-bottom: 15px; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+    
     .input-group { margin-bottom: 15px; }
-    label { display: block; font-size: 14px; margin-bottom: 8px; font-weight: 500; color: #c9d1d9;}
-    select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 15px; }
-    .btn-link { display: block; text-align: center; padding: 12px; background: #238636; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;}
+    label { display: block; font-size: 14px; color: #c9d1d9; margin-bottom: 8px; font-weight: 500; }
+    
+    input[type="text"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; }
+    .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0d1117; padding: 10px 15px; border-radius: 6px; border: 1px solid #30363d; }
+    
+    .slider-container { display: flex; align-items: center; gap: 15px; }
+    input[type="range"] { flex: 1; accent-color: #00f0ff; cursor: pointer; }
+    .val-display { background: #0d1117; border: 1px solid #30363d; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; color: #00f0ff; min-width: 70px; text-align: center; }
+
+    .status-text { text-align: center; font-size: 13px; color: #2ea043; font-weight: 600; margin-top: 10px; height: 20px; opacity: 0; transition: opacity 0.3s; }
+    .status-text.show { opacity: 1; }
+    
+    .btn-link { display: block; text-align: center; padding: 12px; background: #238636; color: white; text-decoration: none; border-radius: 6px; margin-bottom: 15px; font-weight: 600;}
   </style>
 </head>
 <body>
 
+  <!-- ระบบป้องกันรหัสผ่าน -->
   <div id="lock-screen">
-      <h2 style="color: #00f0ff; margin-bottom: 20px;">🔒 รหัสผ่าน Control</h2>
-      <input type="password" id="pin-input" placeholder="รหัสผ่าน">
+      <h2 style="color: #00f0ff; margin-bottom: 20px;">🔒 กรุณาใส่รหัสผ่าน</h2>
+      <input type="password" id="pin-input" placeholder="รหัส PIN 6 หลัก" maxlength="6">
       <button onclick="checkPin()">เข้าสู่ระบบ</button>
   </div>
 
   <div class="container" id="main-content">
-    <div class="card"><a href="recheck.html" target="_blank" class="btn-link">📁 เปิดหน้าจัดการรูปภาพ (ลบรูปทีละหลายไฟล์)</a></div>
+    
     <div class="card">
-      <h3 style="color: #00f0ff; margin-top: 0;">⚙️ ตั้งค่า Layout</h3>
+      <a href="recheck.html" target="_blank" class="btn-link">📁 เปิดหน้าจัดการรูปภาพ (ลบรูปทีละหลายไฟล์)</a>
+    </div>
+
+    <div class="card">
+      <div class="section-title">⚙️ ตั้งค่าหน้าจอ Overlay (Realtime)</div>
       
-      <div class="input-group">
-        <label>📺 โหมดการแสดงผลวงกลมภาพบนจอ</label>
-        <select id="display-mode">
-          <option value="full">1. กระจายแสดงแบบเต็มจอ (Full Screen)</option>
-          <option value="split">2. ชิดขอบซ้าย-ขวา (เว้นพื้นที่ตรงกลาง)</option>
-        </select>
+      <div class="input-group switch-container">
+        <span>📱 แสดง QR Code บนจอ</span>
+        <input type="checkbox" id="toggle-qr" checked>
       </div>
 
+      <div class="input-group">
+        <label>✍️ ข้อความกำกับใต้ QR Code</label>
+        <input type="text" id="welcome-text" placeholder="เช่น สแกนส่งรูปขึ้นจอ">
+      </div>
+
+      <div class="input-group">
+        <label>⬜ ขนาด QR Code (px)</label>
+        <div class="slider-container">
+          <input type="range" id="qr-size" min="100" max="400" step="10" value="150">
+          <div class="val-display" id="qr-size-display">150px</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>🔠 ขนาดข้อความใต้ QR Code (px)</label>
+        <div class="slider-container">
+          <input type="range" id="qr-text-size" min="10" max="40" step="1" value="16">
+          <div class="val-display" id="qr-text-display">16px</div>
+        </div>
+      </div>
+
+      <hr style="border-color: #30363d; margin: 20px 0;">
+
+      <div class="input-group">
+        <label>🫧 ความเร็วการปล่อยสบู่ (น้อย = ถี่มาก)</label>
+        <div class="slider-container">
+          <input type="range" id="spawn-speed" min="1000" max="6000" step="500" value="2500">
+          <div class="val-display" id="speed-display">2500 ms</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>🔍 ขนาดฟองสบู่ (รูปโปรไฟล์)</label>
+        <div class="slider-container">
+          <input type="range" id="bubble-size" min="50" max="200" step="10" value="100">
+          <div class="val-display" id="size-display">100%</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>🔠 ขนาดข้อความชื่อใต้วงกลม (px)</label>
+        <div class="slider-container">
+          <input type="range" id="name-size" min="12" max="60" step="2" value="24">
+          <div class="val-display" id="name-size-display">24px</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>↔️ ระยะการกระจายตัว</label>
+        <div class="slider-container">
+          <input type="range" id="bubble-spread" min="30" max="100" step="5" value="80">
+          <div class="val-display" id="spread-display">80%</div>
+        </div>
+      </div>
+
+      <div class="status-text" id="save-status">✅ ส่งค่าอัปเดตไปที่จอ Overlay แล้ว</div>
     </div>
   </div>
 
@@ -49,31 +125,86 @@
     import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     window.checkPin = function() {
-        if(document.getElementById('pin-input').value === '987654321') {
+        const pin = document.getElementById('pin-input').value;
+        if(pin === '878556') {
             document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
         } else {
             alert('รหัสผ่านไม่ถูกต้อง');
+            document.getElementById('pin-input').value = '';
         }
     };
 
-    const firebaseConfig = { apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk", databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "suchartstudio-9a78d" };
-    const db = getDatabase(initializeApp(firebaseConfig));
-    const roomId = new URLSearchParams(window.location.search).get('room') || 'default';
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+      authDomain: "suchartstudio-9a78d.firebaseapp.com",
+      databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suchartstudio-9a78d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default';
     const settingsRef = ref(db, `events/${roomId}/settings`);
 
-    const displayModeSelect = document.getElementById('display-mode');
-    let isInit = true;
+    const elements = {
+        toggleQr: document.getElementById('toggle-qr'),
+        welcomeText: document.getElementById('welcome-text'),
+        qrSize: document.getElementById('qr-size'),
+        qrTextSize: document.getElementById('qr-text-size'),
+        spawnSpeed: document.getElementById('spawn-speed'),
+        bubbleSize: document.getElementById('bubble-size'),
+        nameSize: document.getElementById('name-size'),
+        bubbleSpread: document.getElementById('bubble-spread')
+    };
 
-    displayModeSelect.addEventListener('change', () => {
-        if(!isInit) update(settingsRef, { displayMode: displayModeSelect.value });
-    });
+    let isInitialLoad = true;
+
+    function saveSettings() {
+      if (isInitialLoad) return;
+      update(settingsRef, {
+        showQR: elements.toggleQr.checked,
+        welcomeText: elements.welcomeText.value,
+        qrSize: Number(elements.qrSize.value),
+        qrTextSize: Number(elements.qrTextSize.value),
+        spawnSpeed: Number(elements.spawnSpeed.value),
+        bubbleSize: Number(elements.bubbleSize.value),
+        nameSize: Number(elements.nameSize.value),
+        bubbleSpread: Number(elements.bubbleSpread.value)
+      }).then(() => {
+          const status = document.getElementById('save-status');
+          status.classList.add('show');
+          setTimeout(() => status.classList.remove('show'), 1500);
+      });
+    }
 
     onValue(settingsRef, (snapshot) => {
-      if (snapshot.exists() && snapshot.val().displayMode) {
-          displayModeSelect.value = snapshot.val().displayMode;
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data.showQR !== undefined) elements.toggleQr.checked = data.showQR;
+        if (data.welcomeText) elements.welcomeText.value = data.welcomeText;
+        if (data.qrSize) { elements.qrSize.value = data.qrSize; document.getElementById('qr-size-display').innerText = data.qrSize + 'px'; }
+        if (data.qrTextSize) { elements.qrTextSize.value = data.qrTextSize; document.getElementById('qr-text-display').innerText = data.qrTextSize + 'px'; }
+        if (data.spawnSpeed) { elements.spawnSpeed.value = data.spawnSpeed; document.getElementById('speed-display').innerText = data.spawnSpeed + ' ms'; }
+        if (data.bubbleSize) { elements.bubbleSize.value = data.bubbleSize; document.getElementById('size-display').innerText = data.bubbleSize + '%'; }
+        if (data.nameSize) { elements.nameSize.value = data.nameSize; document.getElementById('name-size-display').innerText = data.nameSize + 'px'; }
+        if (data.bubbleSpread) { elements.bubbleSpread.value = data.bubbleSpread; document.getElementById('spread-display').innerText = data.bubbleSpread + '%'; }
       }
-      isInit = false;
+      isInitialLoad = false;
+    }, { onlyOnce: true });
+
+    Object.keys(elements).forEach(key => {
+        if(elements[key].type === 'range') {
+            elements[key].addEventListener('input', (e) => {
+                let unit = (key.includes('Size') && key !== 'bubbleSize') ? 'px' : (key === 'spawnSpeed' ? ' ms' : '%');
+                document.getElementById(elements[key].id.replace('size', 'size-display').replace('speed', 'speed-display').replace('spread', 'spread-display')).innerText = e.target.value + unit;
+                saveSettings();
+            });
+        } else {
+            elements[key].addEventListener('change', saveSettings);
+            elements[key].addEventListener('input', saveSettings);
+        }
     });
   </script>
 </body>
