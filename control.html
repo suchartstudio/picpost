@@ -40,23 +40,6 @@
 </head>
 <body>
 
-  <!-- Login Overlay (รหัส 987654321) -->
-  <div id="login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f1117;z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;">
-    <h2 style="color:#00f0ff;margin-bottom:20px;">🔒 เข้าสู่หน้า Control</h2>
-    <input type="password" id="pass-input" placeholder="ใส่รหัสผ่าน" style="padding:10px;border-radius:6px;border:1px solid #21262d;background:#161b22;color:#fff;margin-bottom:15px;text-align:center;font-size:18px;outline:none;">
-    <button id="login-btn" style="padding:10px 30px;background:#7928ca;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-weight:600;">เข้าสู่ระบบ</button>
-    <p id="error-msg" style="color:#f85149;margin-top:15px;display:none;">❌ รหัสผ่านไม่ถูกต้อง</p>
-  </div>
-  <script>
-    document.getElementById('login-btn').addEventListener('click', () => {
-      if(document.getElementById('pass-input').value === '987654321') {
-        document.getElementById('login-overlay').style.display = 'none';
-      } else {
-        document.getElementById('error-msg').style.display = 'block';
-      }
-    });
-  </script>
-
   <div class="container">
     <div class="section-title">00. การจัดการห้อง (Event Room)</div>
     <div class="field">
