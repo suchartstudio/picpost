@@ -40,6 +40,23 @@
 </head>
 <body>
 
+  <!-- Login Overlay (รหัส 878556) -->
+  <div id="login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f1117;z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;">
+    <h2 style="color:#00f0ff;margin-bottom:20px;">🔒 ยืนยันตัวตน (หน้า Manage)</h2>
+    <input type="password" id="pass-input" placeholder="ใส่รหัสผ่าน" style="padding:10px;border-radius:6px;border:1px solid #21262d;background:#161b22;color:#fff;margin-bottom:15px;text-align:center;font-size:18px;outline:none;">
+    <button id="login-btn" style="padding:10px 30px;background:#7928ca;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-weight:600;">เข้าสู่ระบบ</button>
+    <p id="error-msg" style="color:#f85149;margin-top:15px;display:none;">❌ รหัสผ่านไม่ถูกต้อง</p>
+  </div>
+  <script>
+    document.getElementById('login-btn').addEventListener('click', () => {
+      if(document.getElementById('pass-input').value === '878556') {
+        document.getElementById('login-overlay').style.display = 'none';
+      } else {
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    });
+  </script>
+
   <div class="header">
     <h2>🗂️ ระบบจัดการห้อง (Dashboard)</h2>
     <a href="index.html" class="btn-new">➕ สร้างลิงก์ห้องใหม่</a>
@@ -94,7 +111,6 @@
             <div class="room-name">📌 ${roomId}</div>
             <div class="badge-count">📷 ${picCount} รูป</div>
           </div>
-
           <div class="link-group">
             <div class="link-item">
               <span class="link-title">⚙️ Control Panel</span>
@@ -103,7 +119,6 @@
                 <a href="${controlUrl}" target="_blank" class="btn-icon btn-open">🔗 เปิด</a>
               </div>
             </div>
-
             <div class="link-item">
               <span class="link-title">📺 OBS Overlay</span>
               <div class="action-btns">
@@ -111,7 +126,6 @@
                 <a href="${overlayUrl}" target="_blank" class="btn-icon btn-open">🔗 เปิด</a>
               </div>
             </div>
-
             <div class="link-item">
               <span class="link-title">📱 Donate (สแกนรูป)</span>
               <div class="action-btns">
@@ -119,7 +133,6 @@
                 <a href="${donateUrl}" target="_blank" class="btn-icon btn-open">🔗 เปิด</a>
               </div>
             </div>
-
             <div class="link-item">
               <span class="link-title">🛡️ Recheck (ลบรูป)</span>
               <div class="action-btns">
@@ -128,7 +141,6 @@
               </div>
             </div>
           </div>
-
           <button class="btn-delete" onclick="deleteRoom('${roomId}')">🗑️ ลบห้องนี้และล้างรูปทั้งหมด</button>
         `;
         container.appendChild(card);
@@ -149,6 +161,5 @@
       }
     };
   </script>
-
 </body>
 </html>
