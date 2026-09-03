@@ -34,29 +34,11 @@
     .btn-danger { width: 100%; padding: 10px; background: transparent; color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 5px; transition: all 0.2s; }
     .btn-danger:hover { background: rgba(248, 81, 73, 0.1); border-color: #f85149; }
     .divider { height: 1px; background: #21262d; margin: 16px 0; }
-    .link-item { color: #00f0ff; font-size: 12px; display: block; margin-top: 8px; text-decoration: none; padding: 6px; background: rgba(0, 240, 255, 0.1); border-radius: 4px;}
-    .link-item:hover { background: rgba(0, 240, 255, 0.2); }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <div class="section-title">00. การจัดการห้อง (Event Room)</div>
-    <div class="field">
-      <div class="input-row">
-        <input type="text" id="room-input" placeholder="ตั้งชื่อห้อง เช่น event_01">
-        <button id="change-room-btn" class="btn-flat">สลับห้อง</button>
-      </div>
-      <div style="margin-top: 15px;">
-        <label>คัดลอกลิงก์เหล่านี้ไปใช้งาน:</label>
-        <a id="link-overlay" href="#" target="_blank" class="link-item">📺 ลิงก์สำหรับใส่ใน OBS</a>
-        <a id="link-donate" href="#" target="_blank" class="link-item">📱 ลิงก์ส่งรูปให้ผู้ชม (หน้าสแกน QR)</a>
-        <a id="link-recheck" href="#" target="_blank" class="link-item" style="color: #f85149; background: rgba(248, 81, 73, 0.1);">🛡️ ลิงก์สำหรับ Recheck (ลบภาพ)</a>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
     <div class="section-title">01. ข้อความต้อนรับ</div>
     <div class="field">
       <div class="input-row">
@@ -146,17 +128,6 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
-    
-    document.getElementById('room-input').value = roomId;
-    const originUrl = "https://suchartstudio.github.io/picpost";
-    document.getElementById('link-overlay').href = `${originUrl}/overlay.html?room=${roomId}`;
-    document.getElementById('link-donate').href = `${originUrl}/donate.html?room=${roomId}`;
-    document.getElementById('link-recheck').href = `${originUrl}/recheck.html?room=${roomId}`;
-
-    document.getElementById('change-room-btn').addEventListener('click', () => {
-      const newRoom = document.getElementById('room-input').value.trim() || 'default';
-      window.location.search = `?room=${newRoom}`;
-    });
 
     const settingsRef = ref(db, `events/${roomId}/settings`);
 
