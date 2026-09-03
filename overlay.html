@@ -57,6 +57,32 @@
       100% { transform: translateY(-120vh) scale(1.1) rotate(15deg); opacity: 0; }
     }
 
+    /* Animation พิเศษ สำหรับรูปภาพที่ส่งเข้ามาใหม่ (Popup กลางจอ) */
+    .new-image-popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    
+    @keyframes popIn {
+      to { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .new-image-popup.fly-away {
+      animation: flyAway 2s ease-in forwards;
+    }
+
+    @keyframes flyAway {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -150vh) scale(0.5); opacity: 0; }
+    }
+
     .qr-box {
       position: fixed; bottom: 25px; right: 25px; background: rgba(22, 27, 34, 0.85);
       border: 2px solid #00f0ff; border-radius: 16px; padding: 12px;
@@ -97,14 +123,16 @@
     document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
 
     const container = document.getElementById('bubble-container');
-    const imageList = []; // ตอนนี้เก็บเป็น Object { imgUrl, name } แทน
+    const imageList = []; 
     
     let currentIndex = 0;
     let loopTimer = null;
     let spawnSpeed = 2500;
     let bubbleScale = 1;
     let spreadArea = 80;
+    let bubbleMode = 'full';
     let lastLeftPos = -100; 
+    const pageLoadTime = Date.now();
 
     const settingsRef = ref(db, `events/${roomId}/settings`);
     onValue(settingsRef, (snapshot) => {
@@ -113,12 +141,17 @@
 
       document.getElementById('qr-box').style.display = settings.showQR === false ? 'none' : 'flex';
       if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
-      if (settings.bubbleSize) bubbleScale = settings.bubbleSize / 100;
-      if (settings.bubbleSpread) spreadArea = settings.bubbleSpread;
+      if (settings.avatarScale) bubbleScale = settings.avatarScale;
+      if (settings.avatarSpread) spreadArea = settings.avatarSpread;
+      if (settings.bubbleMode) bubbleMode = settings.bubbleMode;
       
-      if (settings.spawnSpeed && settings.spawnSpeed !== spawnSpeed) {
-        spawnSpeed = Number(settings.spawnSpeed);
-        resetLoopTimer();
+      if (settings.avatarSpeed) {
+        // คำนวณความเร็ว (ดัดแปลงจากค่าสไลเดอร์ 0.5 ถึง 4.0)
+        let newSpeed = 2500 / settings.avatarSpeed;
+        if (newSpeed !== spawnSpeed) {
+          spawnSpeed = newSpeed;
+          resetLoopTimer();
+        }
       }
     });
 
@@ -139,24 +172,32 @@
       bubble.appendChild(img);
       wrapper.appendChild(bubble);
 
-      // สร้างป้ายชื่อถ้ามีข้อมูลชื่อส่งมาด้วย
       if (itemData.name) {
         const nameTag = document.createElement('div');
         nameTag.className = 'bubble-name';
         nameTag.innerText = itemData.name;
-        // ปรับฟอนต์ให้ใหญ่ขึ้น/เล็กลงตามสเกลที่ตั้งค่า
         nameTag.style.fontSize = `${Math.max(12, 16 * bubbleScale)}px`;
         wrapper.appendChild(nameTag);
       }
 
       let leftPos;
       let attempts = 0;
-      const margin = (100 - spreadArea) / 2; 
-
-      do {
-        leftPos = margin + Math.floor(Math.random() * spreadArea);
-        attempts++;
-      } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
+      
+      if (bubbleMode === 'sides') {
+        // โหมดชิดขอบซ้ายขวา เว้นตรงกลาง
+        do {
+          const isLeft = Math.random() > 0.5;
+          leftPos = isLeft ? 2 + Math.random() * 20 : 75 + Math.random() * 20;
+          attempts++;
+        } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
+      } else {
+        // โหมดกระจายเต็มจอ
+        const margin = (100 - spreadArea) / 2; 
+        do {
+          leftPos = margin + Math.floor(Math.random() * spreadArea);
+          attempts++;
+        } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
+      }
       
       lastLeftPos = leftPos;
       wrapper.style.left = `${leftPos}%`;
@@ -168,16 +209,47 @@
       setTimeout(() => wrapper.remove(), duration * 1000);
     }
 
+    function showNewImageCenter(itemData) {
+      const popup = document.createElement('div');
+      popup.className = 'new-image-popup';
+      
+      const size = 300 * bubbleScale;
+      popup.innerHTML = `
+        <div class="bubble" style="width: ${size}px; height: ${size}px; border-width: 8px;">
+          <img src="${itemData.imgUrl}">
+        </div>
+        ${itemData.name ? `<div class="bubble-name" style="font-size: ${20 * bubbleScale}px; margin-top: 15px;">${itemData.name}</div>` : ''}
+      `;
+      
+      document.body.appendChild(popup);
+      
+      // ค้างไว้ตรงกลางจอ 3 วินาที
+      setTimeout(() => {
+        popup.classList.add('fly-away');
+        setTimeout(() => {
+          popup.remove();
+          imageList.push(itemData); // นำเข้าระบบวนลูปปกติ
+          createBubble(itemData);
+        }, 2000); 
+      }, 3000);
+    }
+
     onChildAdded(ref(db, `events/${roomId}/donations`), (snapshot) => {
       const data = snapshot.val();
       const imgUrl = data?.imageUrl || data?.url;
-      // รองรับ key ชื่อผู้ส่งหลายรูปแบบ (name, senderName, displayName) ขึ้นอยู่กับฟอร์มหน้าส่งรูป
       const name = data?.name || data?.senderName || data?.displayName || '';
+      const timestamp = data?.timestamp || 0;
 
       if (imgUrl && !imageList.some(item => item.imgUrl === imgUrl)) {
         const newItem = { imgUrl, name };
-        imageList.push(newItem);
-        createBubble(newItem);
+        
+        // เช็คว่าภาพถูกส่งมาใหม่จริงๆ หรือเป็นภาพตอนโหลดหน้าเว็บ
+        if (timestamp > pageLoadTime - 3000) {
+          showNewImageCenter(newItem);
+        } else {
+          imageList.push(newItem);
+          createBubble(newItem);
+        }
       }
     });
 
