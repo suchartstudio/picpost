@@ -11,7 +11,7 @@
     
     .header { max-width: 1000px; margin: 0 auto 20px auto; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 15px; }
     .header h2 { color: #00f0ff; margin: 0; }
-    .btn-new { background: #7928ca; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; transition: 0.2s; }
+    .btn-new { background: #7928ca; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; transition: 0.2s; border:none; cursor:pointer; }
     .btn-new:hover { background: #5e1f9d; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
@@ -59,7 +59,8 @@
 
   <div class="header">
     <h2>🗂️ ระบบจัดการห้อง (Dashboard)</h2>
-    <a href="index.html" class="btn-new">➕ สร้างลิงก์ห้องใหม่</a>
+    <!-- เปลี่ยนจากแท็กลิงก์ เป็นปุ่มเพื่อเรียกใช้งานฟังก์ชัน -->
+    <button class="btn-new" onclick="createNewRoom()">➕ สร้างลิงก์ห้องใหม่</button>
   </div>
 
   <div class="grid" id="room-container">
@@ -158,6 +159,15 @@
     window.deleteRoom = (roomId) => {
       if(confirm(`⚠️ อันตราย: คุณต้องการลบห้อง "${roomId}"\nและรูปภาพทั้งหมดที่ผู้ชมส่งมาทิ้งถาวรหรือไม่?`)) {
         remove(ref(db, `events/${roomId}`));
+      }
+    };
+
+    // เพิ่มฟังก์ชันสำหรับสร้างห้องใหม่
+    window.createNewRoom = () => {
+      const roomName = prompt("กรุณาตั้งชื่อห้อง (แนะนำเป็นภาษาอังกฤษหรือตัวเลขแบบไม่มีเว้นวรรค):");
+      if (roomName && roomName.trim() !== "") {
+        // พาไปหน้าตั้งค่าของห้องใหม่ เมื่อกดเซฟในหน้านั้นห้องจะถูกสร้างลงฐานข้อมูลทันที
+        window.open(`control.html?room=${roomName.trim()}`, '_blank');
       }
     };
   </script>
