@@ -83,20 +83,53 @@
       100% { transform: translate(-50%, -150vh) scale(0.5); opacity: 0; }
     }
 
+    /* รูปแบบพื้นฐานของ QR Box */
     .qr-box {
-      position: fixed; bottom: 25px; right: 25px; background: rgba(22, 27, 34, 0.85);
-      border: 2px solid #00f0ff; border-radius: 16px; padding: 12px;
-      display: flex; flex-direction: column; align-items: center;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); backdrop-filter: blur(5px); z-index: 10;
+      position: fixed; 
+      background: rgba(22, 27, 34, 0.85);
+      border: 2px solid #00f0ff; 
+      border-radius: 16px; 
+      padding: 12px;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); 
+      backdrop-filter: blur(5px); 
+      z-index: 10;
+      transition: all 0.3s ease-in-out;
     }
-    .qr-box img { width: 320px; height: 320px; border-radius: 8px; background: white; padding: 5px; }
-    .qr-box span { color: #00f0ff; font-size: 13px; font-weight: 600; margin-top: 8px; text-shadow: 0 0 5px rgba(0, 0, 0, 0.8); }
+    
+    .qr-box img { 
+      width: 220px; /* ขนาดเริ่มต้น */
+      height: 220px; 
+      border-radius: 8px; 
+      background: white; 
+      padding: 5px; 
+      transition: width 0.3s, height 0.3s;
+    }
+    
+    .qr-box span { 
+      color: #00f0ff; 
+      font-size: 13px; 
+      font-weight: 600; 
+      margin-top: 8px; 
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.8); 
+    }
+
+    /* Class จัดตำแหน่ง QR Box ที่ดึงมาจาก Control */
+    .center { top: 50%; left: 50%; transform: translate(-50%, -50%); bottom: auto; right: auto; }
+    .top-center { top: 25px; left: 50%; transform: translateX(-50%); bottom: auto; right: auto; }
+    .bottom-center { bottom: 25px; left: 50%; transform: translateX(-50%); top: auto; right: auto; }
+    .top-left { top: 25px; left: 25px; bottom: auto; right: auto; transform: none; }
+    .top-right { top: 25px; right: 25px; bottom: auto; left: auto; transform: none; }
+    .bottom-left { bottom: 25px; left: 25px; top: auto; right: auto; transform: none; }
+    .bottom-right { bottom: 25px; right: 25px; top: auto; left: auto; transform: none; }
   </style>
 </head>
 <body>
 
   <div id="bubble-container"></div>
-  <div class="qr-box" id="qr-box">
+  <div class="qr-box bottom-right" id="qr-box">
     <img id="qr-image" src="" alt="Scan QR Code">
     <span id="qr-text">📱 สแกนส่งรูปขึ้นจอ</span>
   </div>
@@ -120,9 +153,11 @@
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
     
-    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
+    document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(`https://suchartstudio.github.io/picpost/donate.html?room=${roomId}`)}`;
 
     const container = document.getElementById('bubble-container');
+    const qrBox = document.getElementById('qr-box');
+    const qrImage = document.getElementById('qr-image');
     const imageList = []; 
     
     let currentIndex = 0;
@@ -139,14 +174,31 @@
       if (!snapshot.exists()) return;
       const settings = snapshot.val();
 
-      document.getElementById('qr-box').style.display = settings.showQR === false ? 'none' : 'flex';
+      // เปิด-ปิด QR
+      qrBox.style.display = settings.showQR === false ? 'none' : 'flex';
+      
+      // ข้อความ
       if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
+      
+      // ตำแหน่ง QR
+      if (settings.qrPosition) {
+        qrBox.className = `qr-box ${settings.qrPosition}`;
+      } else {
+        qrBox.className = 'qr-box bottom-right';
+      }
+
+      // ขนาด QR
+      if (settings.qrSize) {
+        qrImage.style.width = `${settings.qrSize}px`;
+        qrImage.style.height = `${settings.qrSize}px`;
+      }
+
+      // ตั้งค่า Bubble
       if (settings.avatarScale) bubbleScale = settings.avatarScale;
       if (settings.avatarSpread) spreadArea = settings.avatarSpread;
       if (settings.bubbleMode) bubbleMode = settings.bubbleMode;
       
       if (settings.avatarSpeed) {
-        // คำนวณความเร็ว (ดัดแปลงจากค่าสไลเดอร์ 0.5 ถึง 4.0)
         let newSpeed = 2500 / settings.avatarSpeed;
         if (newSpeed !== spawnSpeed) {
           spawnSpeed = newSpeed;
@@ -184,14 +236,12 @@
       let attempts = 0;
       
       if (bubbleMode === 'sides') {
-        // โหมดชิดขอบซ้ายขวา เว้นตรงกลาง
         do {
           const isLeft = Math.random() > 0.5;
           leftPos = isLeft ? 2 + Math.random() * 20 : 75 + Math.random() * 20;
           attempts++;
         } while (Math.abs(leftPos - lastLeftPos) < 15 && attempts < 15);
       } else {
-        // โหมดกระจายเต็มจอ
         const margin = (100 - spreadArea) / 2; 
         do {
           leftPos = margin + Math.floor(Math.random() * spreadArea);
@@ -223,12 +273,11 @@
       
       document.body.appendChild(popup);
       
-      // ค้างไว้ตรงกลางจอ 3 วินาที
       setTimeout(() => {
         popup.classList.add('fly-away');
         setTimeout(() => {
           popup.remove();
-          imageList.push(itemData); // นำเข้าระบบวนลูปปกติ
+          imageList.push(itemData); 
           createBubble(itemData);
         }, 2000); 
       }, 3000);
@@ -243,7 +292,6 @@
       if (imgUrl && !imageList.some(item => item.imgUrl === imgUrl)) {
         const newItem = { imgUrl, name };
         
-        // เช็คว่าภาพถูกส่งมาใหม่จริงๆ หรือเป็นภาพตอนโหลดหน้าเว็บ
         if (timestamp > pageLoadTime - 3000) {
           showNewImageCenter(newItem);
         } else {
