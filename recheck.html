@@ -19,7 +19,6 @@
       padding: 15px; 
     }
 
-    /* แถบควบคุมขนาดภาพแบบไม่มีหัวข้อ */
     .top-bar {
       position: sticky;
       top: 0;
@@ -31,6 +30,7 @@
       border-radius: 10px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       margin-bottom: 20px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
@@ -39,8 +39,6 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      width: 100%;
-      max-width: 350px;
     }
 
     .slider-container label {
@@ -51,10 +49,27 @@
     }
 
     input[type=range] {
-      width: 100%;
+      width: 150px;
       accent-color: #00f0ff;
       cursor: pointer;
     }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-outline {
+      padding: 6px 12px; background: transparent; color: #00f0ff; border: 1px solid #00f0ff;
+      border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;
+    }
+    .btn-outline:hover { background: rgba(0, 240, 255, 0.1); }
+
+    .btn-danger-top {
+      padding: 6px 12px; background: #f85149; color: white; border: none;
+      border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;
+    }
+    .btn-danger-top:hover { background: #d73a33; }
 
     .grid {
       display: grid;
@@ -70,10 +85,28 @@
       display: flex;
       flex-direction: column;
       transition: border-color 0.2s;
+      position: relative;
     }
 
-    .img-card:hover {
-      border-color: #f85149;
+    .img-card:hover { border-color: #f85149; }
+
+    .checkbox-wrap {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(0,0,0,0.6);
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      z-index: 10;
+    }
+
+    .delete-cb {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      margin: 0;
+      accent-color: #f85149;
     }
 
     .img-card img {
@@ -95,9 +128,7 @@
       transition: 0.2s;
     }
 
-    .btn-delete:hover {
-      background: #d73a33;
-    }
+    .btn-delete:hover { background: #d73a33; }
 
     .empty-msg {
       grid-column: 1 / -1;
@@ -114,6 +145,10 @@
       <label>🔍 ปรับขนาดภาพ:</label>
       <input type="range" id="size-slider" min="80" max="350" value="150">
     </div>
+    <div class="top-actions">
+      <button class="btn-outline" id="btn-select-all">☑️ เลือกทั้งหมด</button>
+      <button class="btn-danger-top" id="btn-delete-selected">🗑️ ลบที่เลือก</button>
+    </div>
   </div>
 
   <div class="grid" id="gallery-grid">
@@ -122,7 +157,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    // เพิ่ม update เข้ามาเพื่อใช้เคลียร์ข้อมูลหลายชุดพร้อมกัน
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
@@ -137,22 +173,24 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'default';
 
     const galleryGrid = document.getElementById('gallery-grid');
     const sizeSlider = document.getElementById('size-slider');
+    let isAllSelected = false;
 
-    // ปรับขนาดการแสดงผลรูปภาพผ่าน CSS Variable เมื่อมีการเลื่อนสไลเดอร์
     sizeSlider.addEventListener('input', (e) => {
       document.documentElement.style.setProperty('--card-size', `${e.target.value}px`);
     });
 
-    // ดึงรูปภาพทั้งหมดมาแสดงผล Realtime
     const donationsRef = ref(db, `events/${roomId}/donations`);
     onValue(donationsRef, (snapshot) => {
       galleryGrid.innerHTML = '';
+      
+      // รีเซ็ตปุ่มเลือกทั้งหมดเมื่อมีการโหลดข้อมูลใหม่
+      isAllSelected = false;
+      document.getElementById('btn-select-all').innerText = "☑️ เลือกทั้งหมด";
 
       if (!snapshot.exists()) {
         galleryGrid.innerHTML = '<div class="empty-msg">ไม่มีรูปภาพในระบบ</div>';
@@ -168,6 +206,9 @@
           const card = document.createElement('div');
           card.className = 'img-card';
           card.innerHTML = `
+            <div class="checkbox-wrap">
+              <input type="checkbox" class="delete-cb" value="${photoId}">
+            </div>
             <img src="${imgUrl}" alt="Photo">
             <button class="btn-delete" onclick="deletePhoto('${photoId}')">🗑️ ลบรูปนี้</button>
           `;
@@ -176,12 +217,38 @@
       });
     });
 
-    // ฟังก์ชันสั่งลบรูปภาพจากระบบ
     window.deletePhoto = (photoId) => {
       if (confirm('คุณต้องการลบรูปนี้ใช่หรือไม่?')) {
         remove(ref(db, `events/${roomId}/donations/${photoId}`));
       }
     };
+
+    // ฟังก์ชันเลือก/ยกเลิกเลือกทั้งหมด
+    document.getElementById('btn-select-all').addEventListener('click', (e) => {
+      isAllSelected = !isAllSelected;
+      const checkboxes = document.querySelectorAll('.delete-cb');
+      checkboxes.forEach(cb => cb.checked = isAllSelected);
+      e.target.innerText = isAllSelected ? "☒ ยกเลิกการเลือก" : "☑️ เลือกทั้งหมด";
+    });
+
+    // ฟังก์ชันลบที่เลือกทั้งหมด
+    document.getElementById('btn-delete-selected').addEventListener('click', () => {
+      const checkedBoxes = document.querySelectorAll('.delete-cb:checked');
+      if (checkedBoxes.length === 0) return alert('กรุณาเลือกรูปภาพอย่างน้อย 1 รูปที่ต้องการลบ');
+      
+      if (confirm(`คุณแน่ใจหรือไม่ที่จะลบรูปภาพจำนวน ${checkedBoxes.length} รูป?`)) {
+        const updates = {};
+        checkedBoxes.forEach(cb => {
+          updates[cb.value] = null; // กำหนดค่า null เพื่อลบ record นั้น
+        });
+        
+        // อัปเดตลบหลาย record รวดเดียวเพื่อความรวดเร็วและไม่หน่วง Database
+        update(ref(db, `events/${roomId}/donations`), updates).then(() => {
+          isAllSelected = false;
+          document.getElementById('btn-select-all').innerText = "☑️ เลือกทั้งหมด";
+        });
+      }
+    });
   </script>
 
 </body>
