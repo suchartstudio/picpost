@@ -56,7 +56,7 @@
 
     .new-image-popup {
       position: absolute;
-      top: 50%;
+      top: 50%; /* ค่าเริ่มต้น */
       transform: translate(-50%, -50%) scale(0);
       z-index: 100;
       display: flex;
@@ -172,9 +172,8 @@
     let lastLeftPos = -100; 
     const pageLoadTime = Date.now();
 
-    // ตัวแปรสำหรับระบบ Idle
     let idleTimer = null;
-    const IDLE_TIMEOUT = 15000; // 15 วินาที: หากไม่มีรูปใหม่เข้ามา จะสุ่มรูปเดิมขึ้นมาแสดง
+    const IDLE_TIMEOUT = 15000; 
 
     const settingsRef = ref(db, `events/${roomId}/settings`);
     onValue(settingsRef, (snapshot) => {
@@ -254,15 +253,12 @@
       setTimeout(() => wrapper.remove(), duration * 1000);
     }
 
-    // ฟังก์ชันรีเซ็ตตัวจับเวลาว่าง (Idle)
     function resetIdleTimer() {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(showRandomExistingImage, IDLE_TIMEOUT);
     }
 
-    // ฟังก์ชันสุ่มรูปเก่ามาแสดง
     function showRandomExistingImage() {
-      // ถ้ามีภาพใหม่ต่อคิวอยู่ กำลังแสดงป๊อปอัปอยู่ หรือไม่มีรูปในระบบเลย ให้ข้ามไปแล้วเริ่มนับใหม่
       if (isProcessingPopup || popupQueue.length > 0 || imageList.length === 0) {
         resetIdleTimer();
         return;
@@ -276,10 +272,12 @@
       popup.className = 'new-image-popup';
       
       if (bubbleMode === 'sides') {
-        const isLeft = Math.random() > 0.5;
-        popup.style.left = isLeft ? '20%' : '80%';
+        // หากอยู่ในโหมด sides ให้ภาพสุ่มแสดงที่ส่วนล่างตรงกลางจอ
+        popup.style.left = '50%';
+        popup.style.top = '85%';
       } else {
         popup.style.left = '50%';
+        popup.style.top = '50%';
       }
       
       const size = 300 * bubbleScale;
@@ -296,11 +294,11 @@
         popup.classList.add('fly-away');
         setTimeout(() => {
           popup.remove();
-          createBubble(itemData); // ปล่อยเป็นฟองลอยขึ้นไป
+          createBubble(itemData); 
           
           isProcessingPopup = false;
-          processQueue(); // เผื่อมีคิวภาพใหม่เข้ามาพอดี
-          resetIdleTimer(); // เริ่มนับเวลาว่างรอบใหม่
+          processQueue(); 
+          resetIdleTimer(); 
         }, 2000); 
       }, 3000);
     }
@@ -308,7 +306,7 @@
     function processQueue() {
       if (isProcessingPopup || popupQueue.length === 0) return;
       isProcessingPopup = true;
-      if (idleTimer) clearTimeout(idleTimer); // หยุดเวลารูปสุ่ม เมื่อมีรูปใหม่จริงๆ กำลังแสดง
+      if (idleTimer) clearTimeout(idleTimer); 
       
       const itemData = popupQueue.shift();
       showNewImagePopup(itemData);
@@ -344,7 +342,7 @@
           
           isProcessingPopup = false;
           processQueue();
-          resetIdleTimer(); // เริ่มนับเวลาว่างใหม่หลังแสดงรูปใหม่เสร็จ
+          resetIdleTimer(); 
         }, 2000); 
       }, 3000);
     }
@@ -379,7 +377,7 @@
     }
     
     resetLoopTimer();
-    resetIdleTimer(); // เริ่มเดินระบบจับเวลาว่างตั้งแต่โหลดหน้าเสร็จ
+    resetIdleTimer(); 
   </script>
 
 </body>
