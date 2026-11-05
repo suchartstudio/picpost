@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OBS Bubble Overlay</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap');
     * { box-sizing: border-box; font-family: 'Kanit', sans-serif; }
     
     body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
@@ -47,17 +47,17 @@
       white-space: nowrap;
     }
 
+    /* แก้ไข Keyframes ให้มี translateX(-50%) เพื่อตรึงจุดศูนย์กลาง ป้องกันภาพขยายเหลื่อมขวา */
     @keyframes floatUp {
-      0% { transform: translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
+      0% { transform: translateX(-50%) translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
       10% { opacity: 1; }
       90% { opacity: 1; }
-      100% { transform: translateY(-120vh) scale(1.1) rotate(15deg); opacity: 0; }
+      100% { transform: translateX(-50%) translateY(-120vh) scale(1.1) rotate(15deg); opacity: 0; }
     }
 
     .new-image-popup {
       position: absolute;
       top: 50%;
-      /* เอา left: 50% ออกเพื่อให้ JS เป็นตัวกำหนดตำแหน่งได้อย่างอิสระ */
       transform: translate(-50%, -50%) scale(0);
       z-index: 100;
       display: flex;
@@ -97,9 +97,26 @@
     .qr-box img { 
       width: 220px; height: 220px; border-radius: 8px; background: white; padding: 5px; transition: width 0.3s, height 0.3s;
     }
-    
-    .qr-box span { 
-      color: #00f0ff; font-size: 13px; font-weight: 600; margin-top: 8px; text-shadow: 0 0 5px rgba(0, 0, 0, 0.8); 
+
+    /* CSS สำหรับข้อความบน QR Code */
+    .qr-text-top {
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+      letter-spacing: 0.5px;
+    }
+
+    /* CSS สำหรับข้อความล่าง QR Code (ตัวใหญ่ขึ้นและชัดขึ้น) */
+    .qr-text-bottom {
+      color: #00f0ff;
+      font-size: 22px; 
+      font-weight: 700;
+      margin-top: 10px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+      letter-spacing: 0.5px;
+      text-align: center;
     }
 
     .center { top: 50%; left: 50%; transform: translate(-50%, -50%); bottom: auto; right: auto; }
@@ -115,8 +132,13 @@
 
   <div id="bubble-container"></div>
   <div class="qr-box bottom-right" id="qr-box">
+    <!-- เพิ่มข้อความด้านบน -->
+    <span class="qr-text-top">สแกน QR ส่งรูปขึ้นจอ</span>
+    
     <img id="qr-image" src="" alt="Scan QR Code">
-    <span id="qr-text">📱 สแกนส่งรูปขึ้นจอ</span>
+    
+    <!-- ปรับคลาสข้อความด้านล่างให้รองรับการตั้งค่าจากแผงควบคุม -->
+    <span id="qr-text" class="qr-text-bottom">📱 สแกนส่งรูปขึ้นจอ</span>
   </div>
 
   <script type="module">
@@ -145,7 +167,6 @@
     const qrImage = document.getElementById('qr-image');
     const imageList = []; 
     
-    // ระบบคิวสำหรับภาพใหม่
     const popupQueue = [];
     let isProcessingPopup = false;
 
@@ -163,7 +184,10 @@
       if (!snapshot.exists()) return;
       const settings = snapshot.val();
       qrBox.style.display = settings.showQR === false ? 'none' : 'flex';
+      
+      // อัปเดตข้อความด้านล่างตามที่ตั้งค่าใน control
       if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
+      
       if (settings.qrPosition) qrBox.className = `qr-box ${settings.qrPosition}`;
       else qrBox.className = 'qr-box bottom-right';
 
@@ -234,7 +258,6 @@
       setTimeout(() => wrapper.remove(), duration * 1000);
     }
 
-    // ฟังก์ชันจัดการคิวภาพใหม่
     function processQueue() {
       if (isProcessingPopup || popupQueue.length === 0) return;
       isProcessingPopup = true;
@@ -246,7 +269,6 @@
       const popup = document.createElement('div');
       popup.className = 'new-image-popup';
       
-      // ปรับตำแหน่งแกน X ตามโหมดที่เลือกในตั้งค่า
       if (bubbleMode === 'sides') {
         const isLeft = Math.random() > 0.5;
         popup.style.left = isLeft ? '20%' : '80%';
@@ -271,7 +293,6 @@
           imageList.push(itemData); 
           createBubble(itemData);
           
-          // ทำงานเสร็จ 1 รูป เรียกคิวถัดไปมาทำงานต่อ
           isProcessingPopup = false;
           processQueue();
         }, 2000); 
@@ -288,7 +309,6 @@
         const newItem = { imgUrl, name };
         
         if (timestamp > pageLoadTime - 3000) {
-          // ดันเข้าคิวแทนการแสดงผลทันที
           popupQueue.push(newItem);
           processQueue();
         } else {
