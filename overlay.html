@@ -47,7 +47,6 @@
       white-space: nowrap;
     }
 
-    /* แก้ไข Keyframes ให้มี translateX(-50%) เพื่อตรึงจุดศูนย์กลาง ป้องกันภาพขยายเหลื่อมขวา */
     @keyframes floatUp {
       0% { transform: translateX(-50%) translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
       10% { opacity: 1; }
@@ -98,7 +97,6 @@
       width: 220px; height: 220px; border-radius: 8px; background: white; padding: 5px; transition: width 0.3s, height 0.3s;
     }
 
-    /* CSS สำหรับข้อความบน QR Code */
     .qr-text-top {
       color: #ffffff;
       font-size: 18px;
@@ -108,7 +106,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* CSS สำหรับข้อความล่าง QR Code (ตัวใหญ่ขึ้นและชัดขึ้น) */
     .qr-text-bottom {
       color: #00f0ff;
       font-size: 22px; 
@@ -132,12 +129,8 @@
 
   <div id="bubble-container"></div>
   <div class="qr-box bottom-right" id="qr-box">
-    <!-- เพิ่มข้อความด้านบน -->
     <span class="qr-text-top">สแกน QR ส่งรูปขึ้นจอ</span>
-    
     <img id="qr-image" src="" alt="Scan QR Code">
-    
-    <!-- ปรับคลาสข้อความด้านล่างให้รองรับการตั้งค่าจากแผงควบคุม -->
     <span id="qr-text" class="qr-text-bottom">📱 สแกนส่งรูปขึ้นจอ</span>
   </div>
 
@@ -179,13 +172,16 @@
     let lastLeftPos = -100; 
     const pageLoadTime = Date.now();
 
+    // ตัวแปรสำหรับระบบ Idle
+    let idleTimer = null;
+    const IDLE_TIMEOUT = 15000; // 15 วินาที: หากไม่มีรูปใหม่เข้ามา จะสุ่มรูปเดิมขึ้นมาแสดง
+
     const settingsRef = ref(db, `events/${roomId}/settings`);
     onValue(settingsRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const settings = snapshot.val();
       qrBox.style.display = settings.showQR === false ? 'none' : 'flex';
       
-      // อัปเดตข้อความด้านล่างตามที่ตั้งค่าใน control
       if (settings.welcomeText) document.getElementById('qr-text').innerText = settings.welcomeText;
       
       if (settings.qrPosition) qrBox.className = `qr-box ${settings.qrPosition}`;
@@ -258,9 +254,62 @@
       setTimeout(() => wrapper.remove(), duration * 1000);
     }
 
+    // ฟังก์ชันรีเซ็ตตัวจับเวลาว่าง (Idle)
+    function resetIdleTimer() {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(showRandomExistingImage, IDLE_TIMEOUT);
+    }
+
+    // ฟังก์ชันสุ่มรูปเก่ามาแสดง
+    function showRandomExistingImage() {
+      // ถ้ามีภาพใหม่ต่อคิวอยู่ กำลังแสดงป๊อปอัปอยู่ หรือไม่มีรูปในระบบเลย ให้ข้ามไปแล้วเริ่มนับใหม่
+      if (isProcessingPopup || popupQueue.length > 0 || imageList.length === 0) {
+        resetIdleTimer();
+        return;
+      }
+
+      isProcessingPopup = true;
+      const randomIndex = Math.floor(Math.random() * imageList.length);
+      const itemData = imageList[randomIndex];
+
+      const popup = document.createElement('div');
+      popup.className = 'new-image-popup';
+      
+      if (bubbleMode === 'sides') {
+        const isLeft = Math.random() > 0.5;
+        popup.style.left = isLeft ? '20%' : '80%';
+      } else {
+        popup.style.left = '50%';
+      }
+      
+      const size = 300 * bubbleScale;
+      popup.innerHTML = `
+        <div class="bubble" style="width: ${size}px; height: ${size}px; border-width: 8px;">
+          <img src="${itemData.imgUrl}">
+        </div>
+        ${itemData.name ? `<div class="bubble-name" style="font-size: ${20 * bubbleScale}px; margin-top: 15px;">${itemData.name}</div>` : ''}
+      `;
+      
+      document.body.appendChild(popup);
+      
+      setTimeout(() => {
+        popup.classList.add('fly-away');
+        setTimeout(() => {
+          popup.remove();
+          createBubble(itemData); // ปล่อยเป็นฟองลอยขึ้นไป
+          
+          isProcessingPopup = false;
+          processQueue(); // เผื่อมีคิวภาพใหม่เข้ามาพอดี
+          resetIdleTimer(); // เริ่มนับเวลาว่างรอบใหม่
+        }, 2000); 
+      }, 3000);
+    }
+
     function processQueue() {
       if (isProcessingPopup || popupQueue.length === 0) return;
       isProcessingPopup = true;
+      if (idleTimer) clearTimeout(idleTimer); // หยุดเวลารูปสุ่ม เมื่อมีรูปใหม่จริงๆ กำลังแสดง
+      
       const itemData = popupQueue.shift();
       showNewImagePopup(itemData);
     }
@@ -295,6 +344,7 @@
           
           isProcessingPopup = false;
           processQueue();
+          resetIdleTimer(); // เริ่มนับเวลาว่างใหม่หลังแสดงรูปใหม่เสร็จ
         }, 2000); 
       }, 3000);
     }
@@ -327,7 +377,9 @@
         }
       }, spawnSpeed);
     }
+    
     resetLoopTimer();
+    resetIdleTimer(); // เริ่มเดินระบบจับเวลาว่างตั้งแต่โหลดหน้าเสร็จ
   </script>
 
 </body>
