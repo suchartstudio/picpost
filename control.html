@@ -81,6 +81,10 @@
       </div>
       <img id="icon-preview" src="" style="max-height: 60px; margin-top: 10px; display: none; filter: drop-shadow(0 2px 5px rgba(0,240,255,0.5));">
     </div>
+    <div class="field">
+      <div class="range-header"><label style="margin:0;">ขนาดไอคอนตกแต่ง (Icon Scale)</label><span id="icon-scale-val" class="val-badge">1.0x</span></div>
+      <input type="range" id="icon-scale-input" min="0.5" max="3.0" step="0.1" value="1.0">
+    </div>
 
     <div class="field">
       <label style="margin-bottom: 8px;">โหมดการแสดงผล</label>
@@ -153,6 +157,11 @@
       if (data.avatarSpread !== undefined) { document.getElementById('avatar-spread-input').value = data.avatarSpread; document.getElementById('avatar-spread-val').innerText = `${data.avatarSpread}%`; }
       if (data.bubbleMode) document.getElementById('bubble-mode-select').value = data.bubbleMode;
       
+      if (data.bubbleIconScale !== undefined) { 
+        document.getElementById('icon-scale-input').value = data.bubbleIconScale; 
+        document.getElementById('icon-scale-val').innerText = `${data.bubbleIconScale}x`; 
+      }
+      
       // แสดง/ซ่อน พรีวิวไอคอน
       if (data.bubbleIcon) {
         document.getElementById('icon-preview').src = data.bubbleIcon;
@@ -178,6 +187,9 @@
     document.getElementById('avatar-spread-input').addEventListener('input', (e) => {
       const spread = Number(e.target.value); document.getElementById('avatar-spread-val').innerText = `${spread}%`; update(settingsRef, { avatarSpread: spread });
     });
+    document.getElementById('icon-scale-input').addEventListener('input', (e) => {
+      const scale = Number(e.target.value); document.getElementById('icon-scale-val').innerText = `${scale}x`; update(settingsRef, { bubbleIconScale: scale });
+    });
 
     const updateToggles = () => { update(settingsRef, { showQR: document.getElementById('toggle-qr').checked, showAvatars: document.getElementById('toggle-avatars').checked }); };
     document.getElementById('toggle-qr').addEventListener('change', updateToggles);
@@ -189,7 +201,6 @@
       }
     });
 
-    // ฟังก์ชันแปลงรูปไอคอนให้เป็น Base64 แบบ PNG เพื่อคงความโปร่งใส
     function compressIconToBase64(file, maxWidth = 150, maxHeight = 150) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -210,20 +221,18 @@
       });
     }
 
-    // จัดการการเลือกรูปไอคอน
     document.getElementById('icon-file-input').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
       try {
         const base64Icon = await compressIconToBase64(file, 150, 150);
         update(settingsRef, { bubbleIcon: base64Icon });
-        e.target.value = ''; // เคลียร์ช่อง input
+        e.target.value = '';
       } catch (err) {
         alert('เกิดข้อผิดพลาดในการอัปโหลดไอคอน');
       }
     });
 
-    // ปุ่มลบไอคอน
     document.getElementById('clear-icon-btn').addEventListener('click', () => {
       update(settingsRef, { bubbleIcon: null });
     });
