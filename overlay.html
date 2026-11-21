@@ -186,6 +186,7 @@
     let bubbleMode = 'full';
     let lastLeftPos = -100; 
     let globalBubbleIcon = null;
+    let globalIconScale = 1.0; 
     const pageLoadTime = Date.now();
 
     let idleTimer = null;
@@ -215,6 +216,12 @@
         globalBubbleIcon = settings.bubbleIcon;
       } else {
         globalBubbleIcon = null;
+      }
+      
+      if (settings.bubbleIconScale !== undefined) {
+        globalIconScale = settings.bubbleIconScale;
+      } else {
+        globalIconScale = 1.0;
       }
 
       if (settings.avatarSpeed) {
@@ -249,8 +256,8 @@
         const iconImg = document.createElement('img');
         iconImg.src = globalBubbleIcon;
         iconImg.className = 'attached-icon';
-        iconImg.style.width = `${55 * bubbleScale}px`;
-        iconImg.style.height = `${55 * bubbleScale}px`;
+        iconImg.style.width = `${55 * bubbleScale * globalIconScale}px`;
+        iconImg.style.height = `${55 * bubbleScale * globalIconScale}px`;
         bubbleInner.appendChild(iconImg);
       }
 
@@ -316,7 +323,7 @@
       }
       
       const size = 300 * bubbleScale;
-      const iconHtml = globalBubbleIcon ? `<img src="${globalBubbleIcon}" class="attached-icon" style="width: ${75 * bubbleScale}px; height: ${75 * bubbleScale}px;">` : '';
+      const iconHtml = globalBubbleIcon ? `<img src="${globalBubbleIcon}" class="attached-icon" style="width: ${75 * bubbleScale * globalIconScale}px; height: ${75 * bubbleScale * globalIconScale}px;">` : '';
 
       popup.innerHTML = `
         <div style="position: relative;">
@@ -364,7 +371,7 @@
       }
       
       const size = 300 * bubbleScale;
-      const iconHtml = globalBubbleIcon ? `<img src="${globalBubbleIcon}" class="attached-icon" style="width: ${75 * bubbleScale}px; height: ${75 * bubbleScale}px;">` : '';
+      const iconHtml = globalBubbleIcon ? `<img src="${globalBubbleIcon}" class="attached-icon" style="width: ${75 * bubbleScale * globalIconScale}px; height: ${75 * bubbleScale * globalIconScale}px;">` : '';
 
       popup.innerHTML = `
         <div style="position: relative;">
