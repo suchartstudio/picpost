@@ -47,6 +47,21 @@
       white-space: nowrap;
     }
 
+    .attached-icon {
+      position: absolute;
+      bottom: -10px;
+      right: -15px;
+      object-fit: contain;
+      z-index: 10;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+      animation: floatIcon 3s infinite ease-in-out;
+    }
+
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-8px) rotate(5deg); }
+    }
+
     @keyframes floatUp {
       0% { transform: translateX(-50%) translateY(0) scale(0.7) rotate(0deg); opacity: 0; }
       10% { opacity: 1; }
@@ -56,7 +71,7 @@
 
     .new-image-popup {
       position: absolute;
-      top: 50%; /* ค่าเริ่มต้น */
+      top: 50%;
       transform: translate(-50%, -50%) scale(0);
       z-index: 100;
       display: flex;
@@ -170,6 +185,7 @@
     let spreadArea = 80;
     let bubbleMode = 'full';
     let lastLeftPos = -100; 
+    let globalBubbleIcon = null;
     const pageLoadTime = Date.now();
 
     let idleTimer = null;
@@ -195,6 +211,12 @@
       if (settings.avatarSpread) spreadArea = settings.avatarSpread;
       if (settings.bubbleMode) bubbleMode = settings.bubbleMode;
       
+      if (settings.bubbleIcon !== undefined) {
+        globalBubbleIcon = settings.bubbleIcon;
+      } else {
+        globalBubbleIcon = null;
+      }
+
       if (settings.avatarSpeed) {
         let newSpeed = 2500 / settings.avatarSpeed;
         if (newSpeed !== spawnSpeed) {
@@ -208,6 +230,9 @@
       const wrapper = document.createElement('div');
       wrapper.className = 'bubble-wrapper';
 
+      const bubbleInner = document.createElement('div');
+      bubbleInner.style.position = 'relative';
+
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       const baseSize = Math.floor(Math.random() * 80) + 120;
@@ -218,7 +243,18 @@
       const img = document.createElement('img');
       img.src = itemData.imgUrl;
       bubble.appendChild(img);
-      wrapper.appendChild(bubble);
+      bubbleInner.appendChild(bubble);
+
+      if (globalBubbleIcon) {
+        const iconImg = document.createElement('img');
+        iconImg.src = globalBubbleIcon;
+        iconImg.className = 'attached-icon';
+        iconImg.style.width = `${55 * bubbleScale}px`;
+        iconImg.style.height = `${55 * bubbleScale}px`;
+        bubbleInner.appendChild(iconImg);
+      }
+
+      wrapper.appendChild(bubbleInner);
 
       if (itemData.name) {
         const nameTag = document.createElement('div');
@@ -272,7 +308,6 @@
       popup.className = 'new-image-popup';
       
       if (bubbleMode === 'sides') {
-        // หากอยู่ในโหมด sides ให้ภาพสุ่มแสดงที่ส่วนล่างตรงกลางจอ
         popup.style.left = '50%';
         popup.style.top = '85%';
       } else {
@@ -281,9 +316,14 @@
       }
       
       const size = 300 * bubbleScale;
+      const iconHtml = globalBubbleIcon ? `<img src="${globalBubbleIcon}" class="attached-icon" style="width: ${75 * bubbleScale}px; height: ${75 * bubbleScale}px;">` : '';
+
       popup.innerHTML = `
-        <div class="bubble" style="width: ${size}px; height: ${size}px; border-width: 8px;">
-          <img src="${itemData.imgUrl}">
+        <div style="position: relative;">
+          <div class="bubble" style="width: ${size}px; height: ${size}px; border-width: 8px;">
+            <img src="${itemData.imgUrl}">
+          </div>
+          ${iconHtml}
         </div>
         ${itemData.name ? `<div class="bubble-name" style="font-size: ${20 * bubbleScale}px; margin-top: 15px;">${itemData.name}</div>` : ''}
       `;
@@ -324,9 +364,14 @@
       }
       
       const size = 300 * bubbleScale;
+      const iconHtml = globalBubbleIcon ? `<img src="${globalBubbleIcon}" class="attached-icon" style="width: ${75 * bubbleScale}px; height: ${75 * bubbleScale}px;">` : '';
+
       popup.innerHTML = `
-        <div class="bubble" style="width: ${size}px; height: ${size}px; border-width: 8px;">
-          <img src="${itemData.imgUrl}">
+        <div style="position: relative;">
+          <div class="bubble" style="width: ${size}px; height: ${size}px; border-width: 8px;">
+            <img src="${itemData.imgUrl}">
+          </div>
+          ${iconHtml}
         </div>
         ${itemData.name ? `<div class="bubble-name" style="font-size: ${20 * bubbleScale}px; margin-top: 15px;">${itemData.name}</div>` : ''}
       `;
